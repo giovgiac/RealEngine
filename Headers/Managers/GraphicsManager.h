@@ -26,15 +26,15 @@
  *      5. O operador de atribuição que permite incorporar outros objetos através da std::move.
  *
  */
-class GraphicsManager {
+class GraphicsManager final {
 private:
     /* O atributo responsável por guardar a instância única do objeto de tipo Device que é inicializado pelo próprio
      * objeto no método startup. */
-    std::unique_ptr<class Device> device;
+    std::shared_ptr<class Device> device;
 
-    /* O atributo responsável por guardar a instância única do objeto de tipo Instance que é inicializado pelo próprio
-     * objeto no método startup. */
-    std::unique_ptr<class Instance> instance;
+    /* O atributo responsável por guardar a instância compartilhada do objeto de tipo Instance que é inicializado pelo
+     * próprio objeto no método startup. */
+    std::shared_ptr<class Instance> instance;
 
 private:
     /**
@@ -44,16 +44,16 @@ private:
      */
     explicit GraphicsManager();
 
-public:
     ~GraphicsManager();
 
+public:
     /**
      * O método getGraphicsDevice serve para retornar uma referência, que não pode ser modificada, ao objeto de tipo
      * Device, permitindo que outros objetos possam, por exemplo, adquirir sua handle e utilizá-lo em outras chamadas
      * da API Vulkan que necessitem da especificação do parâmetro VkDevice ou VkPhysicalDevice.
      *
      */
-    Result<const class Device &> getGraphicsDevice() const noexcept;
+    Result<std::weak_ptr<const class Device>> getGraphicsDevice() const noexcept;
 
     /**
      * O método getGraphicsInstance serve para retornar uma referência, que não pode ser modificada, ao objeto de tipo
@@ -61,7 +61,7 @@ public:
      * da API Vulkan que necessitem da especificação do parâmetro VkInstance.
      *
      */
-    Result<const class Instance &> getGraphicsInstance() const noexcept;
+    Result<std::weak_ptr<const class Instance>> getGraphicsInstance() const noexcept;
 
     /**
      * O método getManager tem como objetivo retornar uma referência para a instância única do GraphicsManager, com a

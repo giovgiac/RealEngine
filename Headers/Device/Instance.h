@@ -28,7 +28,7 @@
  *      5. O operador de atribuição que permite incorporar outros objetos através da std::move.
  *
  */
-class Instance {
+class Instance final {
 private:
     /* O atributo que determina se haverá a ativação das camadas Vulkan que são responsáveis por funções de logging,
      * perfilamento e depuração. */
@@ -101,6 +101,8 @@ public:
      *
      */
     explicit Instance(const utf8 *appName, uint32 appVersion, bool bDebug = false);
+
+    ~Instance();
 
     /**
      * O método cujo objetivo é retornar a handle do objeto VkInstance para que ele possa ser utilizado em outros

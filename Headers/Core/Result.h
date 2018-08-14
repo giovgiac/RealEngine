@@ -23,7 +23,7 @@
  *
  */
 template<typename T>
-class Result {
+class Result final {
 private:
     /* O atributo que indica se há um erro ou não armazenado no objeto do tipo Result. */
     bool bHasError = false;
@@ -42,7 +42,7 @@ private:
      * gerarem erros com o código apropriado.
      *
      */
-    explicit Result(Error err) : bHasError(true), error(err), value(0) {}
+    explicit Result(Error err) : bHasError(true), error(err), value() {}
 
 public:
     /**
@@ -105,7 +105,7 @@ public:
 };
 
 template <>
-class Result<void> {
+class Result<void> final {
 private:
     /* O atributo que indica se há um erro ou não armazenado no objeto do tipo Result. */
     bool bHasError = false;

@@ -99,19 +99,22 @@ Result<std::vector<VkPhysicalDevice>> Device::getPhysicalDevices() const noexcep
     std::vector<VkPhysicalDevice> physicalDeviceList = {};
     uint32 physicalDeviceCount = 0;
 
-    Result<VkInstance> inst = this->instance->getVulkanInstance();
-    if (!inst.hasError()) {
-        auto vkInstance = static_cast<VkInstance>(inst);
+    if (std::shared_ptr<const Instance> inst = this->instance.lock()) {
+        Result<VkInstance> res = inst->getVulkanInstance();
+        if (!res.hasError()) {
+            auto vkInstance = static_cast<VkInstance>(res);
 
-        vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, nullptr);
-        physicalDeviceList.resize(physicalDeviceCount);
-        vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, physicalDeviceList.data());
+            vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, nullptr);
+            physicalDeviceList.resize(physicalDeviceCount);
+            vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, physicalDeviceList.data());
 
-        return Result<std::vector<VkPhysicalDevice>>(physicalDeviceList);
+            return Result<std::vector<VkPhysicalDevice>>(physicalDeviceList);
+        } else {
+            return Result<std::vector<VkPhysicalDevice>>::createError(Error::DeviceNotStartedUp);
+        }
     }
-    else {
-        return Result<std::vector<VkPhysicalDevice>>::createError(Error::DeviceNotStartedUp);
-    }
+
+    return Result<std::vector<VkPhysicalDevice>>::createError(Error::InstanceNotStartedUp);
 }
 
 Result<void> Device::selectVulkanPhysicalDevice() {
@@ -136,13 +139,26 @@ Result<void> Device::selectVulkanPhysicalDevice() {
     }
 }
 
-Device::Device(const Instance *inst, std::vector<const utf8 *> extensions,
+Device::Device(std::weak_ptr<const Instance> inst, std::vector<const utf8 *> extensions,
                struct VkPhysicalDeviceFeatures features, struct VkPhysicalDeviceLimits limits, bool bDebug) {
-    this->instance = inst;
+    this->instance = std::move(inst);
     this->requiredExtensions = std::move(extensions);
     this->requiredFeatures = std::make_unique<VkPhysicalDeviceFeatures>(features);
     this->requiredLimits = std::make_unique<VkPhysicalDeviceLimits>(limits);
     this->bIsDebug = bDebug;
+}
+
+Device::~Device() {
+    this->instance.reset();
+
+    this->requiredExtensions = {};
+    this->requiredFeatures = nullptr;
+    this->requiredLimits = nullptr;
+    this->bIsDebug = false;
+
+    if (this->device != VK_NULL_HANDLE || this->physicalDevice != VK_NULL_HANDLE)
+        std::cout << "WARNING: Device deleted without being shutdown..." << std::endl,
+        this->shutdown();
 }
 
 Result<VkDevice> Device::getVulkanDevice() const noexcept {
@@ -170,9 +186,11 @@ Result<void> Device::startup() {
 }
 
 void Device::shutdown() {
-    vkDestroyDevice(this->device, nullptr);
-    this->device = nullptr;
-    this->physicalDevice = nullptr;
+    if (this->instance.lock())
+        vkDestroyDevice(this->device, nullptr);
+
+    this->device = VK_NULL_HANDLE;
+    this->physicalDevice = VK_NULL_HANDLE;
 
     std::cout << "Destroyed Logical Device..." << std::endl;
 }

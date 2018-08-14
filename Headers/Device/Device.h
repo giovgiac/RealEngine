@@ -32,7 +32,7 @@
  *      5. O operador de atribuição que permite incorporar outros objetos através da std::move.
  *
  */
-class Device {
+class Device final {
 private:
     /* O atributo que informa se as camadas de logging, depuração e perfilamento da API Vulkan serão ativadas no
      * dispositivo lógico. */
@@ -40,7 +40,8 @@ private:
 
     /* O atributo que armazena uma referência para a instância da aplicação, utilizada para acessar a instância
      * Vulkan. */
-    const class Instance *instance;
+    //const class Instance *instance;
+    std::weak_ptr<const class Instance> instance;
 
     /* O atributo que armazena a handle do dispositivo lógico da API Vulkan. O dispositivo lógico é utilizado para
      * realizar a maior parte das operações, tanto de renderização como de movimentação de dados. */
@@ -154,11 +155,13 @@ public:
      *
      */
     explicit Device(
-            const class Instance *inst,
+            std::weak_ptr<const class Instance> inst,
             std::vector<const utf8 *> extensions,
             struct VkPhysicalDeviceFeatures features,
             struct VkPhysicalDeviceLimits limits,
             bool bDebug = false);
+
+    ~Device();
 
     /**
      * Esse método tem como objetivo retornar todos os dispositivos físicos que são aptos a rodar a aplicação e serve

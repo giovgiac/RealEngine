@@ -48,6 +48,16 @@ Instance::Instance(const utf8 *appName, uint32 appVersion, bool bDebug) {
     this->instance = VK_NULL_HANDLE;
 }
 
+Instance::~Instance() {
+    this->applicationName = nullptr;
+    this->applicationVersion = VK_MAKE_VERSION(0, 0, 0);
+    this->bIsDebug = false;
+
+    if (this->instance != VK_NULL_HANDLE)
+        std::cout << "WARNING: Instance deleted without being shutdown..." << std::endl,
+        this->shutdown();
+}
+
 Result<VkInstance> Instance::getVulkanInstance() const noexcept {
     if (this->instance != VK_NULL_HANDLE)
         return Result<VkInstance>(this->instance);

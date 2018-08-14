@@ -13,27 +13,28 @@
 #include <vulkan/vulkan.hpp>
 
 GraphicsManager::GraphicsManager() {
-    this->device = std::unique_ptr<Device>(nullptr);
-    this->instance = std::unique_ptr<Instance>(nullptr);
-}
-
-GraphicsManager::~GraphicsManager() {
     this->device = nullptr;
     this->instance = nullptr;
 }
 
-Result<const Device &> GraphicsManager::getGraphicsDevice() const noexcept {
-    if (this->device)
-        return Result<const Device &>(*this->device);
-    //else
-        //return Result<const Device &>::createError(Error::GraphicsManagerNotStartedUp);
+GraphicsManager::~GraphicsManager() {
+    if (this->device != nullptr || this->instance != nullptr)
+        std::cout << "WARNING: GraphicsManager deleted without being shutdown..." << std::endl,
+        this->shutdown();
 }
 
-Result<const Instance &> GraphicsManager::getGraphicsInstance() const noexcept {
+Result<std::weak_ptr<const Device>> GraphicsManager::getGraphicsDevice() const noexcept {
+    if (this->device)
+        return Result<std::weak_ptr<const Device>>(this->device);
+    else
+        return Result<std::weak_ptr<const Device>>::createError(Error::GraphicsManagerNotStartedUp);
+}
+
+Result<std::weak_ptr<const Instance>> GraphicsManager::getGraphicsInstance() const noexcept {
     if (this->instance)
-        return Result<const Instance &>(*this->instance);
-    //else
-        //return Result<const Instance &>::createError(Error::GraphicsManagerNotStartedUp);
+        return Result<std::weak_ptr<const Instance>>(this->instance);
+    else
+        return Result<std::weak_ptr<const class Instance>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
 Result<void> GraphicsManager::startup() {
@@ -45,8 +46,8 @@ Result<void> GraphicsManager::startup() {
     VkPhysicalDeviceLimits limits = {};
 
     // Allocate objects
-    instance = std::unique_ptr<Instance>(new Instance("Test Application", VK_MAKE_VERSION(1, 0, 0), false));
-    device = std::unique_ptr<Device>(new Device(instance.get(), extensions, features, limits, false));
+    instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
+    device = std::make_shared<Device>(instance, extensions, features, limits, false);
 
     // Initialize objects
     Result<void> instanceResult = instance->startup();
