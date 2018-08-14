@@ -5,37 +5,18 @@
  *
  */
 
-#include "Device.h"
-#include "Instance.h"
-
-#include <iostream>
-#include <vulkan/vulkan.hpp>
+#include "GraphicsManager.h"
 
 int main() {
-    std::vector<const utf8 *> requiredExtensions = {};
-    VkPhysicalDeviceFeatures requiredFeatures = {};
-    VkPhysicalDeviceLimits requiredLimits = {};
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
 
-    auto inst = new Instance("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
-    auto dev = new Device(inst, requiredExtensions, requiredFeatures, requiredLimits, false);
+    // Startup Managers
+    Result<void> graphicsResult = graphicsManager.startup();
+    if (graphicsResult.hasError())
+        return 1;
 
-    inst->startup();
-    dev->startup();
-
-    Result<VkInstance> res = inst->getVulkanInstance();
-    if (!res.hasError())
-        std::cout << "Instance: " << static_cast<VkInstance>(res) << std::endl;
-
-    Result<VkPhysicalDevice> pd = dev->getVulkanPhysicalDevice();
-    if (!pd.hasError())
-        std::cout << "Physical Device: " << static_cast<VkPhysicalDevice>(pd) << std::endl;
-
-    Result<VkDevice> d = dev->getVulkanDevice();
-    if (!d.hasError())
-        std::cout << "Device: " << static_cast<VkDevice>(d) << std::endl;
-
-    dev->shutdown();
-    inst->shutdown();
+    // Shutdown Managers
+    graphicsManager.shutdown();
 
     return EXIT_SUCCESS;
 }
