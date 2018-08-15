@@ -6,6 +6,8 @@
  */
 
 #include "GraphicsManager.h"
+#include "Memory.h"
+#include "MemoryManager.h"
 #include "Instance.h"
 
 #include <iostream>
@@ -13,12 +15,18 @@
 
 int main() {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    MemoryManager &memoryManager = MemoryManager::getManager();
 
     // Startup Managers
     Result<void> graphicsResult = graphicsManager.startup();
     if (graphicsResult.hasError())
         return 1;
 
+    Result<void> memoryResult = memoryManager.startup();
+    if (memoryResult.hasError())
+        return 1;
+
+    // Test Instance
     Result<std::weak_ptr<const Instance>> res = graphicsManager.getGraphicsInstance();
     if (!res.hasError()) {
         auto instance = static_cast<std::weak_ptr<const Instance>>(res);
@@ -34,7 +42,21 @@ int main() {
         }
     }
 
+    // Test Memory
+    const VkMemoryRequirements memoryRequirements = { 2048, 64, (1 << 5) | (1 << 6) | (1 << 8) };
+    VkMemoryPropertyFlags requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    Result<uint32> result = Memory::chooseHeapFromFlags(memoryRequirements, requiredFlags);
+    if (!result.hasError()) {
+        auto heap = static_cast<uint32>(result);
+        std::cout << "Chosen Heap: " << heap << std::endl;
+    }
+    else {
+        std::cout << "Error: " << static_cast<uint32>(result.getError()) << std::endl;
+        return 1;
+    }
+
     // Shutdown Managers
+    memoryManager.shutdown();
     graphicsManager.shutdown();
 
     return EXIT_SUCCESS;

@@ -46,17 +46,17 @@ Result<void> GraphicsManager::startup() {
     VkPhysicalDeviceLimits limits = {};
 
     // Allocate objects
-    instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
-    device = std::make_shared<Device>(instance, extensions, features, limits, false);
+    this->instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
+    this->device = std::make_shared<Device>(this->instance, extensions, features, limits, false);
 
     // Initialize objects
-    Result<void> instanceResult = instance->startup();
+    Result<void> instanceResult = this->instance->startup();
     if (instanceResult.hasError()) {
         std::cout << "Failed To Start Up GraphicsManager - Instance..." << std::endl;
         return Result<void>::createError(instanceResult.getError());
     }
 
-    Result<void> deviceResult = device->startup();
+    Result<void> deviceResult = this->device->startup();
     if (deviceResult.hasError()) {
         std::cout << "Failed To Start Up GraphicsManager - Device..." << std::endl;
         return Result<void>::createError(deviceResult.getError());
@@ -66,12 +66,12 @@ Result<void> GraphicsManager::startup() {
 }
 
 void GraphicsManager::shutdown() {
-    device->shutdown();
-    instance->shutdown();
+    this->device->shutdown();
+    this->instance->shutdown();
 
     // Clear objects
-    device.reset();
-    instance.reset();
+    this->device.reset();
+    this->instance.reset();
 
     std::cout << "Shutting Down GraphicsManager..." << std::endl;
 }

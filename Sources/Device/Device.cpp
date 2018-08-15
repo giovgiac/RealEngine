@@ -16,7 +16,66 @@ bool Device::checkPhysicalDeviceExtensions(VkPhysicalDevice pd) const noexcept {
 }
 
 bool Device::checkPhysicalDeviceFeatures(VkPhysicalDevice pd) const noexcept {
-    return true;
+    VkPhysicalDeviceFeatures features = {};
+    VkPhysicalDeviceFeatures required = *this->requiredFeatures;
+
+    vkGetPhysicalDeviceFeatures(pd, &features);
+    return
+            (required.robustBufferAccess ? features.robustBufferAccess : true)                                              &&
+            (required.fullDrawIndexUint32 ? features.fullDrawIndexUint32 : true)                                            &&
+            (required.imageCubeArray ? features.imageCubeArray : true)                                                      &&
+            (required.independentBlend ? features.independentBlend : true)                                                  &&
+            (required.geometryShader ? features.geometryShader : true)                                                      &&
+            (required.tessellationShader ? features.tessellationShader : true)                                              &&
+            (required.sampleRateShading ? features.sampleRateShading : true)                                                &&
+            (required.dualSrcBlend ? features.dualSrcBlend : true)                                                          &&
+            (required.logicOp ? features.logicOp : true)                                                                    &&
+            (required.multiDrawIndirect ? features.multiDrawIndirect : true)                                                &&
+            (required.drawIndirectFirstInstance ? features.drawIndirectFirstInstance : true)                                &&
+            (required.depthClamp ? features.depthClamp : true)                                                              &&
+            (required.depthBiasClamp ? features.depthBiasClamp : true)                                                      &&
+            (required.fillModeNonSolid ? features.fillModeNonSolid : true)                                                  &&
+            (required.depthBounds ? features.depthBounds : true)                                                            &&
+            (required.wideLines ? features.wideLines : true)                                                                &&
+            (required.largePoints ? features.largePoints : true)                                                            &&
+            (required.alphaToOne ? features.alphaToOne : true)                                                              &&
+            (required.multiViewport ? features.multiViewport : true)                                                        &&
+            (required.samplerAnisotropy ? features.samplerAnisotropy : true)                                                &&
+            (required.textureCompressionETC2 ? features.textureCompressionETC2 : true)                                      &&
+            (required.textureCompressionASTC_LDR ? features.textureCompressionASTC_LDR : true)                              &&
+            (required.textureCompressionBC ? features.textureCompressionBC : true)                                          &&
+            (required.occlusionQueryPrecise ? features.occlusionQueryPrecise : true)                                        &&
+            (required.pipelineStatisticsQuery ? features.pipelineStatisticsQuery : true)                                    &&
+            (required.vertexPipelineStoresAndAtomics ? features.vertexPipelineStoresAndAtomics : true)                      &&
+            (required.fragmentStoresAndAtomics ? features.fragmentStoresAndAtomics : true)                                  &&
+            (required.shaderTessellationAndGeometryPointSize ? features.shaderTessellationAndGeometryPointSize : true)      &&
+            (required.shaderImageGatherExtended ? features.shaderImageGatherExtended : true)                                &&
+            (required.shaderStorageImageExtendedFormats ? features.shaderStorageImageExtendedFormats : true)                &&
+            (required.shaderStorageImageMultisample ? features.shaderStorageImageMultisample : true)                        &&
+            (required.shaderStorageImageReadWithoutFormat ? features.shaderStorageImageReadWithoutFormat : true)            &&
+            (required.shaderStorageImageWriteWithoutFormat ? features.shaderStorageImageWriteWithoutFormat : true)          &&
+            (required.shaderUniformBufferArrayDynamicIndexing ? features.shaderUniformBufferArrayDynamicIndexing : true)    &&
+            (required.shaderSampledImageArrayDynamicIndexing ? features.shaderSampledImageArrayDynamicIndexing : true)      &&
+            (required.shaderStorageBufferArrayDynamicIndexing ? features.shaderStorageBufferArrayDynamicIndexing : true)    &&
+            (required.shaderStorageImageArrayDynamicIndexing ? features.shaderStorageImageArrayDynamicIndexing : true)      &&
+            (required.shaderClipDistance ? features.shaderClipDistance : true)                                              &&
+            (required.shaderCullDistance ? features.shaderCullDistance : true)                                              &&
+            (required.shaderFloat64 ? features.shaderFloat64 : true)                                                        &&
+            (required.shaderInt64 ? features.shaderInt64 : true)                                                            &&
+            (required.shaderInt16 ? features.shaderInt16 : true)                                                            &&
+            (required.shaderResourceResidency ? features.shaderResourceResidency : true)                                    &&
+            (required.shaderResourceMinLod ? features.shaderResourceMinLod : true)                                          &&
+            (required.sparseBinding ? features.sparseBinding : true)                                                        &&
+            (required.sparseResidencyBuffer ? features.sparseResidencyBuffer : true)                                        &&
+            (required.sparseResidencyImage2D ? features.sparseResidencyImage2D : true)                                      &&
+            (required.sparseResidencyImage3D ? features.sparseResidencyImage3D : true)                                      &&
+            (required.sparseResidency2Samples ? features.sparseResidency2Samples : true)                                    &&
+            (required.sparseResidency4Samples ? features.sparseResidency4Samples : true)                                    &&
+            (required.sparseResidency8Samples ? features.sparseResidency8Samples : true)                                    &&
+            (required.sparseResidency16Samples ? features.sparseResidency16Samples : true)                                  &&
+            (required.sparseResidencyAliased ? features.sparseResidencyAliased : true)                                      &&
+            (required.variableMultisampleRate ? features.variableMultisampleRate : true)                                    &&
+            (required.inheritedQueries ? features.inheritedQueries : true);
 }
 
 bool Device::checkPhysicalDeviceLimits(VkPhysicalDevice pd) const noexcept {

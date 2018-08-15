@@ -24,8 +24,9 @@ enum class Error : uint16 {
     InstanceNotStartedUp = 3,
     DeviceNotStartedUp = 4,
     GraphicsManagerNotStartedUp = 5,
-    NoPhysicalDeviceAvailable = 6,
-    FailedRetrievingPhysicalDevices = 7
+    MemoryManagerNotStartedUp = 6,
+    NoPhysicalDeviceAvailable = 7,
+    FailedRetrievingPhysicalDevices = 8
 };
 
 #endif /* ERROR_H_ */

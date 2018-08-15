@@ -40,7 +40,6 @@ private:
 
     /* O atributo que armazena uma referência para a instância da aplicação, utilizada para acessar a instância
      * Vulkan. */
-    //const class Instance *instance;
     std::weak_ptr<const class Instance> instance;
 
     /* O atributo que armazena a handle do dispositivo lógico da API Vulkan. O dispositivo lógico é utilizado para
@@ -154,12 +153,11 @@ public:
      * utilizado, o seu método startup precisa ser chamado ou os outros métodos retornarão erros.
      *
      */
-    explicit Device(
-            std::weak_ptr<const class Instance> inst,
-            std::vector<const utf8 *> extensions,
-            struct VkPhysicalDeviceFeatures features,
-            struct VkPhysicalDeviceLimits limits,
-            bool bDebug = false);
+    explicit Device(std::weak_ptr<const class Instance> inst,
+                    std::vector<const utf8 *> extensions,
+                    struct VkPhysicalDeviceFeatures features,
+                    struct VkPhysicalDeviceLimits limits,
+                    bool bDebug = false);
 
     ~Device();
 
