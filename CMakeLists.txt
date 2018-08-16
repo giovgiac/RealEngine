@@ -15,9 +15,9 @@ link_libraries(freeimage)
 link_libraries(vulkan)
 
 # Header Files
-set(HEADERS Headers/Core/Result.h Headers/Core/Error.h Headers/Core/Types.h Headers/Device/Instance.h Headers/Device/Device.h Headers/Managers/GraphicsManager.h Headers/Device/Memory.h Headers/Managers/MemoryManager.h)
+set(HEADERS Headers/Core/Result.h Headers/Core/Error.h Headers/Core/Types.h Headers/Device/Instance.h Headers/Device/Device.h Headers/Managers/GraphicsManager.h Headers/Device/Memory.h Headers/Managers/MemoryManager.h Headers/Device/Allocator.h Headers/Device/PoolAllocator.h)
 
 # Source Files
-set(SOURCES Sources/Device/Instance.cpp Sources/Device/Device.cpp Sources/Managers/GraphicsManager.cpp Sources/Device/Memory.cpp Sources/Managers/MemoryManager.cpp)
+set(SOURCES Sources/Device/Instance.cpp Sources/Device/Device.cpp Sources/Managers/GraphicsManager.cpp Sources/Device/Memory.cpp Sources/Managers/MemoryManager.cpp Sources/Device/PoolAllocator.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

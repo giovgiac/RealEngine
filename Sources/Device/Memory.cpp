@@ -17,10 +17,8 @@ Memory::Memory() {
 }
 
 Memory::~Memory() {
-    this->memory.reset();
-
     this->heap = 0;
-    this->memory = nullptr;
+    this->memory = VK_NULL_HANDLE;
     this->offset = 0;
 }
 
@@ -54,7 +52,7 @@ std::unique_ptr<Memory> Memory::createMemory(VkDeviceMemory mem, VkDeviceSize of
     std::unique_ptr<Memory> newMemory(new Memory);
 
     newMemory->heap = hp;
-    newMemory->memory = std::make_unique<VkDeviceMemory>(mem);
+    newMemory->memory = mem;
     newMemory->offset = off;
 
     return std::move(newMemory);

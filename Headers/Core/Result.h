@@ -50,7 +50,7 @@ public:
      * não haverá presença de erro e o objeto armazenado será retornado corretamente.
      *
      */
-    explicit Result(T val) : bHasError(false), error(Error::None), value(val) {}
+    explicit Result(T val) : bHasError(false), error(Error::None), value(std::move(val)) {}
 
     /**
      * Um método estático que permite criar um objeto do tipo Result com um código de erro especificado. Deve ser
@@ -96,11 +96,11 @@ public:
      * de extrair valores de uma Result com erros.
      *
      */
-    inline explicit operator T() const {
+    inline explicit operator T() {
         if (hasError())
             throw std::invalid_argument("Requested value of Result with errors...");
 
-        return value;
+        return std::move(value);
     }
 };
 

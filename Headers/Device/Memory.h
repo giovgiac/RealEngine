@@ -33,7 +33,7 @@ protected:
 
     /* O atributo que armazena a handle para a memória de vídeo diretamente. Este é o mesmo endereço do alocador que
      * obteve este pedaço específico de memória. */
-    std::unique_ptr<struct VkDeviceMemory_T *> memory;
+    struct VkDeviceMemory_T *memory;
 
     /* O offset que deve-se adicionar ao handle da memória de vídeo para chegar-se na região de memória representada
      * por este objeto. */

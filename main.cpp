@@ -6,9 +6,10 @@
  */
 
 #include "GraphicsManager.h"
+#include "Instance.h"
 #include "Memory.h"
 #include "MemoryManager.h"
-#include "Instance.h"
+#include "PoolAllocator.h"
 
 #include <iostream>
 #include <vulkan/vulkan.hpp>
@@ -51,7 +52,30 @@ int main() {
         std::cout << "Chosen Heap: " << heap << std::endl;
     }
     else {
-        std::cout << "Error: " << static_cast<uint32>(result.getError()) << std::endl;
+        std::cout << "Memory Error: " << static_cast<uint32>(result.getError()) << std::endl;
+        return 1;
+    }
+
+    // Test Allocators
+    Result<std::shared_ptr<PoolAllocator>> rslt = PoolAllocator::createAllocator(4096, 64, 16, requiredFlags);
+    if (!rslt.hasError()) {
+        auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
+
+        // Allocate Some Memory
+        Result<std::unique_ptr<Memory>> res = allocator->allocate();
+
+        if (!res.hasError()) {
+            auto memory = static_cast<std::unique_ptr<Memory>>(res);
+
+            std::cout << "Testing Allocators..." << std::endl;
+            allocator->free(memory);
+        } else {
+            std::cout << "Allocator Error: " << static_cast<uint32>(res.getError()) << std::endl;
+            return 1;
+        }
+    }
+    else {
+        std::cout << "Allocator Error: " << static_cast<uint32>(rslt.getError()) << std::endl;
         return 1;
     }
 

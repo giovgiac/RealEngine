@@ -19,14 +19,16 @@
  */
 enum class Error : uint16 {
     None = 0,
-    FailedToCreateInstance = 1,
-    FailedToCreateDevice = 2,
-    InstanceNotStartedUp = 3,
-    DeviceNotStartedUp = 4,
-    GraphicsManagerNotStartedUp = 5,
-    MemoryManagerNotStartedUp = 6,
-    NoPhysicalDeviceAvailable = 7,
-    FailedRetrievingPhysicalDevices = 8
+    FailedToCreateInstance,
+    FailedToCreateDevice,
+    FailedToAllocateDeviceMemory,
+    InstanceNotStartedUp,
+    DeviceNotStartedUp,
+    GraphicsManagerNotStartedUp,
+    MemoryManagerNotStartedUp,
+    NoPhysicalDeviceAvailable,
+    FailedRetrievingPhysicalDevices,
+    NoMemoryAvailableInAllocator
 };
 
 #endif /* ERROR_H_ */

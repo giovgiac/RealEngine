@@ -5,9 +5,9 @@
  *
  */
 
+#include "MemoryManager.h"
 #include "Device.h"
 #include "GraphicsManager.h"
-#include "MemoryManager.h"
 
 #include <iostream>
 #include <vulkan/vulkan.hpp>
