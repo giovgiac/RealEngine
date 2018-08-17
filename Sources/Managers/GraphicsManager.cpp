@@ -34,7 +34,7 @@ Result<std::weak_ptr<const Instance>> GraphicsManager::getGraphicsInstance() con
     if (this->instance)
         return Result<std::weak_ptr<const Instance>>(this->instance);
     else
-        return Result<std::weak_ptr<const class Instance>>::createError(Error::GraphicsManagerNotStartedUp);
+        return Result<std::weak_ptr<const Instance>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
 Result<void> GraphicsManager::startup() {

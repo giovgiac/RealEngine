@@ -7,6 +7,7 @@
 
 #include "Buffer.h"
 #include "GraphicsManager.h"
+#include "Image.h"
 #include "Instance.h"
 #include "Memory.h"
 #include "MemoryManager.h"
@@ -98,6 +99,34 @@ int main() {
     }
     else {
         std::cout << "Buffer Error: " << static_cast<uint32>(bufferResult.getError()) << std::endl;
+        return 1;
+    }
+
+    // Test Images
+    Result<std::shared_ptr<Image>> imageResult = Image::createImage({1024, 1024, 1},
+                                                                    VK_IMAGE_TYPE_2D,
+                                                                    1,
+                                                                    8,
+                                                                    VK_IMAGE_USAGE_SAMPLED_BIT &
+                                                                    VK_IMAGE_USAGE_STORAGE_BIT,
+                                                                    VK_FORMAT_R8G8B8A8_UNORM,
+                                                                    VK_IMAGE_TILING_OPTIMAL);
+    if (!imageResult.hasError()) {
+        auto image = static_cast<std::shared_ptr<Image>>(imageResult);
+        Result<VkImage> imageRslt = image->getVulkanImage();
+
+        if (!imageRslt.hasError()) {
+            auto vulkanImage = static_cast<VkImage>(imageRslt);
+
+            std::cout << "Created Image Resource: " << vulkanImage << std::endl;
+        }
+        else {
+            std::cout << "Image Error: " << static_cast<uint32>(imageRslt.getError()) << std::endl;
+            return 1;
+        }
+    }
+    else {
+        std::cout << "Image Error: " << static_cast<uint32>(imageResult.getError()) << std::endl;
         return 1;
     }
 
