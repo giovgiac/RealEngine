@@ -5,6 +5,7 @@
  *
  */
 
+#include "Buffer.h"
 #include "GraphicsManager.h"
 #include "Instance.h"
 #include "Memory.h"
@@ -76,6 +77,27 @@ int main() {
     }
     else {
         std::cout << "Allocator Error: " << static_cast<uint32>(rslt.getError()) << std::endl;
+        return 1;
+    }
+
+    // Test Buffers
+    Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(128, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    if (!bufferResult.hasError()) {
+        auto buffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
+        Result<VkBuffer> bufferRslt = buffer->getVulkanBuffer();
+
+        if (!bufferRslt.hasError()) {
+            auto vulkanBuffer = static_cast<VkBuffer>(bufferRslt);
+
+            std::cout << "Created Buffer Resource: " << vulkanBuffer << std::endl;
+        }
+        else {
+            std::cout << "Buffer Error: " << static_cast<uint32>(bufferRslt.getError()) << std::endl;
+            return 1;
+        }
+    }
+    else {
+        std::cout << "Buffer Error: " << static_cast<uint32>(bufferResult.getError()) << std::endl;
         return 1;
     }
 

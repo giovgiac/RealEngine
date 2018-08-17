@@ -22,6 +22,8 @@ enum class Error : uint16 {
     FailedToCreateInstance,
     FailedToCreateDevice,
     FailedToAllocateDeviceMemory,
+    FailedToCreateBuffer,
+    FailedToRetrieveBuffer,
     InstanceNotStartedUp,
     DeviceNotStartedUp,
     GraphicsManagerNotStartedUp,
