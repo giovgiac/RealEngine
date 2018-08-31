@@ -21,18 +21,23 @@ enum class Error : uint16 {
     None = 0,
     FailedToCreateInstance,
     FailedToCreateDevice,
+    FailedToAllocateCommandBuffer,
     FailedToAllocateDeviceMemory,
     FailedToCreateBuffer,
-    FailedToRetrieveBuffer,
     FailedToCreateImage,
+    FailedToCreateCommandPool,
+    FailedToRetrieveBuffer,
     FailedToRetrieveImage,
+    FailedToRetrieveQueue,
+    IndexOutOfRange,
     InstanceNotStartedUp,
     DeviceNotStartedUp,
     GraphicsManagerNotStartedUp,
     MemoryManagerNotStartedUp,
     NoPhysicalDeviceAvailable,
     FailedRetrievingPhysicalDevices,
-    NoMemoryAvailableInAllocator
+    NoMemoryAvailableInAllocator,
+    SubmitParametersNotMatching
 };
 
 #endif /* ERROR_H_ */

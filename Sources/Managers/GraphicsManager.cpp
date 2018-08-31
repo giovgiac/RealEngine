@@ -8,9 +8,10 @@
 #include "Device.h"
 #include "GraphicsManager.h"
 #include "Instance.h"
+#include "Renderer.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 GraphicsManager::GraphicsManager() {
     this->device = nullptr;
@@ -47,7 +48,8 @@ Result<void> GraphicsManager::startup() {
 
     // Allocate objects
     this->instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
-    this->device = std::make_shared<Device>(this->instance, extensions, features, limits, false);
+    this->device = std::make_shared<Device>(extensions, features, limits, false);
+    this->renderer = std::make_shared<Renderer>();
 
     // Initialize objects
     Result<void> instanceResult = this->instance->startup();
@@ -62,16 +64,24 @@ Result<void> GraphicsManager::startup() {
         return Result<void>::createError(deviceResult.getError());
     }
 
+    Result<void> rendererResult = this->renderer->startup();
+    if (rendererResult.hasError()) {
+        std::cout << "Failed To Start Up GraphicsManager - Renderer..." << std::endl;
+        return Result<void>::createError(rendererResult.getError());
+    }
+
     return Result<void>::createError(Error::None);
 }
 
 void GraphicsManager::shutdown() {
     this->device->shutdown();
     this->instance->shutdown();
+    this->renderer->shutdown();
 
     // Clear objects
     this->device.reset();
     this->instance.reset();
+    this->renderer.reset();
 
     std::cout << "Shutting Down GraphicsManager..." << std::endl;
 }

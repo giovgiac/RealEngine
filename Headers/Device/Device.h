@@ -38,10 +38,6 @@ private:
      * dispositivo lógico. */
     bool bIsDebug = false;
 
-    /* O atributo que armazena uma referência para a instância da aplicação, utilizada para acessar a instância
-     * Vulkan. */
-    std::weak_ptr<const class Instance> instance;
-
     /* O atributo que armazena a handle do dispositivo lógico da API Vulkan. O dispositivo lógico é utilizado para
      * realizar a maior parte das operações, tanto de renderização como de movimentação de dados. */
     struct VkDevice_T *device;
@@ -49,6 +45,8 @@ private:
     /* O atributo que armazena a handle do dispositivo físico da API Vulkan, pode ser utilizado para obter várias
      * informações a respeito do dispositivo, como seus limites e funcionalidades disponíveis. */
     struct VkPhysicalDevice_T *physicalDevice;
+
+    std::vector<std::shared_ptr<class Queue>> queues;
 
     /* Um vetor com todas as extensões requeridas pela aplicação para serem procuradas no dispositivo físico, deve
      * ser lido de um arquivo de texto. */
@@ -86,6 +84,9 @@ private:
      *
      */
     bool checkPhysicalDeviceLimits(struct VkPhysicalDevice_T *pd) const noexcept;
+
+    Result<void> createQueues(
+            std::vector<struct VkDeviceQueueCreateInfo> *deviceQueueCreateInfo);
 
     /**
      * Um método auxiliar que tem como função criar um dispositivo lógico junto a API Vulkan.
@@ -153,8 +154,7 @@ public:
      * utilizado, o seu método startup precisa ser chamado ou os outros métodos retornarão erros.
      *
      */
-    explicit Device(std::weak_ptr<const class Instance> inst,
-                    std::vector<const utf8 *> extensions,
+    explicit Device(std::vector<const utf8 *> extensions,
                     struct VkPhysicalDeviceFeatures features,
                     struct VkPhysicalDeviceLimits limits,
                     bool bDebug = false);
@@ -167,6 +167,8 @@ public:
      *
      */
     Result<std::vector<struct VkPhysicalDevice_T *>> getAvailablePhysicalDevices() const noexcept;
+
+    const std::vector<std::shared_ptr<class Queue>>& getDeviceQueues() const noexcept;
 
     /**
      * Esse método serve para retornar a handle para o dispositivo lógico da API Vulkan e, só irá retornar o valor caso

@@ -36,6 +36,8 @@ private:
      * próprio objeto no método startup. */
     std::shared_ptr<class Instance> instance;
 
+    std::shared_ptr<class Renderer> renderer;
+
 private:
     /**
      * O construtor padrão de GraphicsManager e que não pode ser utilizado. O seu único objetivo é resetar os valores

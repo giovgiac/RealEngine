@@ -25,7 +25,41 @@
  *
  */
 class Queue {
+protected:
+    struct VkCommandBuffer_T *buffer;
 
+    struct VkCommandPool_T *pool;
+
+    struct VkQueue_T *queue;
+
+    uint32 familyIndex;
+
+    uint32 queueIndex;
+
+protected:
+    explicit Queue();
+
+    struct VkCommandBufferAllocateInfo getCommandBufferAllocateInfo() const noexcept;
+
+    struct VkCommandPoolCreateInfo getCommandPoolCreateInfo() const noexcept;
+
+public:
+    static Result<std::shared_ptr<Queue>> createQueue(struct VkDevice_T *device,
+                                                      uint32 familyIndex,
+                                                      uint32 queueIndex);
+
+    Result<struct VkCommandBuffer_T *> getVulkanBuffer() const noexcept;
+
+    Result<struct VkCommandPool_T *> getVulkanPool() const noexcept;
+
+    Result<struct VkQueue_T *> getVulkanQueue() const noexcept;
+
+public:
+    Queue(const Queue &) = delete;
+    Queue(Queue &&) = delete;
+
+    Queue &operator=(const Queue &) = delete;
+    Queue &operator=(Queue &&) = delete;
 };
 
 #endif /* QUEUE_H_ */

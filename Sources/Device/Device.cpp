@@ -6,10 +6,12 @@
  */
 
 #include "Device.h"
+#include "GraphicsManager.h"
 #include "Instance.h"
+#include "Queue.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 bool Device::checkPhysicalDeviceExtensions(VkPhysicalDevice pd) const noexcept {
     return true;
@@ -82,6 +84,25 @@ bool Device::checkPhysicalDeviceLimits(VkPhysicalDevice pd) const noexcept {
     return true;
 }
 
+Result<void> Device::createQueues(std::vector<struct VkDeviceQueueCreateInfo> *deviceQueueCreateInfo) {
+    for (auto& queueCreateInfo : *deviceQueueCreateInfo) {
+        for (uint32 i = 0; i < queueCreateInfo.queueCount; i++) {
+            Result<std::shared_ptr<Queue>> result = Queue::createQueue(this->device,
+                                                                       queueCreateInfo.queueFamilyIndex,
+                                                                       i);
+
+            if (!result.hasError()) {
+                auto queue = static_cast<std::shared_ptr<Queue>>(result);
+                this->queues.push_back(std::move(queue));
+            } else {
+                return Result<void>::createError(Error::FailedToRetrieveQueue);
+            }
+        }
+    }
+
+    return Result<void>::createError(Error::None);
+}
+
 Result<void> Device::createVulkanDevice() {
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfo = this->getDeviceQueueCreateInfo();
     VkDeviceCreateInfo deviceCreateInfo = this->getDeviceCreateInfo(&deviceQueueCreateInfo);
@@ -89,6 +110,7 @@ Result<void> Device::createVulkanDevice() {
     if (this->physicalDevice != VK_NULL_HANDLE) {
         VkResult result = vkCreateDevice(this->physicalDevice, &deviceCreateInfo, nullptr, &this->device);
         if (result == VK_SUCCESS) {
+            this->createQueues(&deviceQueueCreateInfo);
             std::cout << "Created Logical Device..." << std::endl;
             return Result<void>::createError(Error::None);
         }
@@ -155,21 +177,27 @@ std::vector<VkQueueFamilyProperties> Device::getPhysicalDeviceQueueFamilyPropert
 }
 
 Result<std::vector<VkPhysicalDevice>> Device::getPhysicalDevices() const noexcept {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
     std::vector<VkPhysicalDevice> physicalDeviceList = {};
     uint32 physicalDeviceCount = 0;
 
-    if (std::shared_ptr<const Instance> inst = this->instance.lock()) {
-        Result<VkInstance> res = inst->getVulkanInstance();
-        if (!res.hasError()) {
-            auto vkInstance = static_cast<VkInstance>(res);
+    Result<std::weak_ptr<const Instance>> result = graphicsManager.getGraphicsInstance();
+    if (!result.hasError()) {
+        auto instance = static_cast<std::weak_ptr<const Instance>>(result);
 
-            vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, nullptr);
-            physicalDeviceList.resize(physicalDeviceCount);
-            vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, physicalDeviceList.data());
+        if (std::shared_ptr<const Instance> inst = instance.lock()) {
+            Result<VkInstance> res = inst->getVulkanInstance();
+            if (!res.hasError()) {
+                auto vkInstance = static_cast<VkInstance>(res);
 
-            return Result<std::vector<VkPhysicalDevice>>(physicalDeviceList);
-        } else {
-            return Result<std::vector<VkPhysicalDevice>>::createError(Error::DeviceNotStartedUp);
+                vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, nullptr);
+                physicalDeviceList.resize(physicalDeviceCount);
+                vkEnumeratePhysicalDevices(vkInstance, &physicalDeviceCount, physicalDeviceList.data());
+
+                return Result<std::vector<VkPhysicalDevice>>(physicalDeviceList);
+            } else {
+                return Result<std::vector<VkPhysicalDevice>>::createError(Error::DeviceNotStartedUp);
+            }
         }
     }
 
@@ -198,17 +226,17 @@ Result<void> Device::selectVulkanPhysicalDevice() {
     }
 }
 
-Device::Device(std::weak_ptr<const Instance> inst, std::vector<const utf8 *> extensions,
+Device::Device(std::vector<const utf8 *> extensions,
                struct VkPhysicalDeviceFeatures features, struct VkPhysicalDeviceLimits limits, bool bDebug) {
-    this->instance = std::move(inst);
     this->requiredExtensions = std::move(extensions);
     this->requiredFeatures = std::make_unique<VkPhysicalDeviceFeatures>(features);
     this->requiredLimits = std::make_unique<VkPhysicalDeviceLimits>(limits);
     this->bIsDebug = bDebug;
+    this->queues = std::vector<std::shared_ptr<Queue>>();
 }
 
 Device::~Device() {
-    this->instance.reset();
+    this->queues.clear();
 
     this->requiredExtensions = {};
     this->requiredFeatures = nullptr;
@@ -218,6 +246,10 @@ Device::~Device() {
     if (this->device != VK_NULL_HANDLE || this->physicalDevice != VK_NULL_HANDLE)
         std::cout << "WARNING: Device deleted without being shutdown..." << std::endl,
         this->shutdown();
+}
+
+const std::vector<std::shared_ptr<Queue>>& Device::getDeviceQueues() const noexcept {
+    return this->queues;
 }
 
 Result<VkDevice> Device::getVulkanDevice() const noexcept {
@@ -245,8 +277,7 @@ Result<void> Device::startup() {
 }
 
 void Device::shutdown() {
-    if (this->instance.lock())
-        vkDestroyDevice(this->device, nullptr);
+    vkDestroyDevice(this->device, nullptr);
 
     this->device = VK_NULL_HANDLE;
     this->physicalDevice = VK_NULL_HANDLE;
