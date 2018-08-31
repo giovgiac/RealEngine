@@ -73,7 +73,7 @@ protected:
      * reservada no dispositivo físico, onde poderá realizar múltiplas operações.
      *
      */
-    void allocateMemory();
+    Result<void> allocateMemory();
 
     /**
      * O método auxiliar que tem como função criar e preencher a estrutura do tipo VkBufferCreateInfo. Esta estrutura

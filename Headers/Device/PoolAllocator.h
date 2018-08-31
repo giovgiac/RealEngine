@@ -27,7 +27,7 @@
  *      5. O operador de atribuição que permite incorporar outros objetos através da std::move.
  *
  */
-class PoolAllocator final : public IAllocator {
+class PoolAllocator final : public Allocator {
 private:
     /* O atributo que guarda o alinhamento da memória do PoolAllocator, importante para que as operações sejam
      * realizadas em velocidade máxima. */
@@ -124,7 +124,9 @@ public:
      * alinhamento está guardado no atributo alignment.
      *
      */
-    inline uint64 getAllocatorAlignment() const noexcept { return alignment; }
+    inline uint64 getAllocatorAlignment() const noexcept { return this->alignment; }
+
+    inline uint64 getAllocatorChunkSize() const noexcept { return this->chunkSize; }
 
     /**
      * O método que os alocadores necessitam para que outros objetos possam efetuar requisições de alocações

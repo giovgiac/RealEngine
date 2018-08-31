@@ -43,6 +43,8 @@ protected:
 
     struct VkCommandPoolCreateInfo getCommandPoolCreateInfo() const noexcept;
 
+    struct VkSubmitInfo getSubmitInfo() const noexcept;
+
 public:
     static Result<std::shared_ptr<Queue>> createQueue(struct VkDevice_T *device,
                                                       uint32 familyIndex,
@@ -53,6 +55,8 @@ public:
     Result<struct VkCommandPool_T *> getVulkanPool() const noexcept;
 
     Result<struct VkQueue_T *> getVulkanQueue() const noexcept;
+
+    Result<void> submit() const noexcept;
 
 public:
     Queue(const Queue &) = delete;

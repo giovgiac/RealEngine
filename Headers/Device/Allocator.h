@@ -11,19 +11,19 @@
 #include "Result.h"
 
 /**
- * A interface IAllocator tem como objetivo fornecer um conjunto de métodos simples que todos os alocadores precisam
- * ter, sejam eles StackAllocators, PoolAllocators ou outros. Através desta interface, outros objetos poderão armazenar
- * ou receber alocadores sem necessitarem saber qual o tipo específico que lhes foi encaminhado.
+ * A classe abstrata Allocator tem como objetivo fornecer um conjunto de métodos simples que todos os alocadores
+ * precisamter, sejam eles StackAllocators, PoolAllocators ou outros. Através desta interface, outros objetos poderão
+ * armazenar ou receber alocadores sem necessitarem saber qual o tipo específico que lhes foi encaminhado.
  *
  */
-class IAllocator {
+class Allocator {
 protected:
     /**
      * Um construtor padrão da interface que serve apenas para permitir a criação correta de seus descendentes. Um
-     * objeto do tipo IAllocator não poderá ser criado devido a virtualidade pura de seus métodos.
+     * objeto do tipo Allocator não poderá ser criado devido a virtualidade pura de seus métodos.
      *
      */
-    explicit IAllocator() = default;
+    explicit Allocator() = default;
 
 public:
     /**
@@ -47,11 +47,11 @@ public:
     virtual void free(std::unique_ptr<class Memory> &mem) = 0;
 
 public:
-    IAllocator(const IAllocator &) = delete;
-    IAllocator(IAllocator &&) = delete;
+    Allocator(const Allocator &) = delete;
+    Allocator(Allocator &&) = delete;
 
-    IAllocator &operator=(const IAllocator &) = delete;
-    IAllocator &operator=(IAllocator &&) = delete;
+    Allocator &operator=(const Allocator &) = delete;
+    Allocator &operator=(Allocator &&) = delete;
 };
 
 #endif /* ALLOCATOR_H_ */

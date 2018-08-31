@@ -9,6 +9,8 @@
 #include "Device.h"
 #include "GraphicsManager.h"
 #include "Memory.h"
+#include "MemoryManager.h"
+#include "PoolAllocator.h"
 #include "Queue.h"
 
 #include <iostream>
@@ -23,8 +25,50 @@ Buffer::Buffer() {
     this->usage = 0;
 }
 
-void Buffer::allocateMemory() {
+Result<void> Buffer::allocateMemory() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+    MemoryManager &memoryManager = MemoryManager::getManager();
 
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+
+        // Get Memory Requirements
+        VkMemoryRequirements memoryRequirements = {};
+        vkGetBufferMemoryRequirements(device, this->buffer, &memoryRequirements);
+
+        Result<std::shared_ptr<PoolAllocator>> rslt = memoryManager.requestPoolAllocator(memoryRequirements.alignment,
+                                                                                         memoryRequirements.size);
+
+        if (!rslt.hasError()) {
+            auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
+            Result<std::unique_ptr<Memory>> res = allocator->allocate(this->size);
+
+            if (!res.hasError()) {
+                this->memory = static_cast<std::unique_ptr<Memory>>(res);
+
+                // Bind Memory to Buffer
+                VkResult success = vkBindBufferMemory(device,
+                                                      this->buffer,
+                                                      this->memory->getMemory(),
+                                                      this->memory->getMemoryOffset());
+
+                if (success == VK_SUCCESS) {
+                    return Result<void>::createError(Error::None);
+                }
+                else {
+                    return Result<void>::createError(Error::FailedToBindBufferMemory);
+                }
+            }
+            else {
+                return Result<void>::createError(res.getError());
+            }
+        }
+        else {
+            return Result<void>::createError(rslt.getError());
+        }
+    }
+
+    return Result<void>::createError(result.getError());
 }
 
 VkBufferCreateInfo Buffer::getBufferCreateInfo() const noexcept {
@@ -97,8 +141,14 @@ Result<std::shared_ptr<Buffer>> Buffer::createBuffer(VkDeviceSize siz, VkBufferU
         VkResult rslt = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer->buffer);
 
         if (rslt == VK_SUCCESS) {
-            buffer->allocateMemory();
-            return Result<std::shared_ptr<Buffer>>(std::move(buffer));
+            Result<void> res = buffer->allocateMemory();
+
+            if (!res.hasError()) {
+                return Result<std::shared_ptr<Buffer>>(std::move(buffer));
+            }
+            else {
+                return Result<std::shared_ptr<Buffer>>::createError(res.getError());
+            }
         }
         else
             return Result<std::shared_ptr<Buffer>>::createError(Error::FailedToCreateBuffer);
@@ -125,8 +175,14 @@ Result<std::shared_ptr<Buffer>> Buffer::createSharedBuffer(VkDeviceSize siz,
         VkResult rslt = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer->buffer);
 
         if (rslt == VK_SUCCESS) {
-            buffer->allocateMemory();
-            return Result<std::shared_ptr<Buffer>>(std::move(buffer));
+            Result<void> res = buffer->allocateMemory();
+
+            if (!res.hasError()) {
+                return Result<std::shared_ptr<Buffer>>(std::move(buffer));
+            }
+            else {
+                return Result<std::shared_ptr<Buffer>>::createError(res.getError());
+            }
         }
         else
             return Result<std::shared_ptr<Buffer>>::createError(Error::FailedToCreateBuffer);

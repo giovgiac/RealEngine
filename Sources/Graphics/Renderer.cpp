@@ -5,8 +5,10 @@
  *
  */
 
+#include "Buffer.h"
 #include "Device.h"
 #include "GraphicsManager.h"
+#include "Image.h"
 #include "Renderer.h"
 #include "Queue.h"
 
@@ -36,9 +38,18 @@ Renderer::~Renderer() {
 
 }
 
-Result<void> Renderer::flush() noexcept {
+Result<void> Renderer::flush() const noexcept {
     // Check Mutexes for Queues
     // Submit All Queues if Mutexes Available
+    for (auto &queue : this->deviceQueues) {
+        Result<void> result = queue->submit();
+
+        if (result.hasError()) {
+            return Result<void>::createError(result.getError());
+        }
+    }
+
+    return Result<void>::createError(Error::None);
 }
 
 Result<void> Renderer::startup() {
@@ -61,7 +72,7 @@ void Renderer::shutdown() {
     this->deviceQueues.clear();
 }
 
-Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) noexcept {
+Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) const noexcept {
     if (cmd != Command::CopyBuffer)
         return Result<void>::createError(Error::SubmitParametersNotMatching);
 
@@ -72,7 +83,7 @@ Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) noexcept {
     // Unset Queue Mutex
 }
 
-Result<void> Renderer::submit(Command cmd, SetBufferInfo info) noexcept {
+Result<void> Renderer::submit(Command cmd, SetBufferInfo info) const noexcept {
     if (cmd != Command::SetBuffer)
         return Result<void>::createError(Error::SubmitParametersNotMatching);
 
@@ -81,4 +92,30 @@ Result<void> Renderer::submit(Command cmd, SetBufferInfo info) noexcept {
     // Process Command and Add to Queue
     // vkCmdUpdateBuffer()
     // Unset Queue Mutex
+
+    std::shared_ptr<Queue> randomQueue = this->deviceQueues[0];
+
+    Result<VkCommandBuffer> result = randomQueue->getVulkanBuffer();
+    if (!result.hasError()) {
+        auto commandBuffer = static_cast<VkCommandBuffer>(result);
+
+        Result<VkBuffer> rslt = info.buffer->getVulkanBuffer();
+        if (!rslt.hasError()) {
+            auto buffer = static_cast<VkBuffer>(rslt);
+
+            // Execute Command
+            vkCmdUpdateBuffer(commandBuffer,
+                              buffer,
+                              info.offset,
+                              info.size,
+                              info.data);
+
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(rslt.getError());
+        }
+    }
+
+    return Result<void>::createError(result.getError());
 }

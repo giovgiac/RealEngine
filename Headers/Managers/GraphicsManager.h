@@ -65,6 +65,8 @@ public:
      */
     Result<std::weak_ptr<const class Instance>> getGraphicsInstance() const noexcept;
 
+    Result<std::weak_ptr<const class Renderer>> getRenderer() const noexcept;
+
     /**
      * O método getManager tem como objetivo retornar uma referência para a instância única do GraphicsManager, com a
      * finalidade de que os seus métodos possam ser invocados de qualquer posição do código, até mesmo dentro de

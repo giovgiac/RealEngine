@@ -41,6 +41,22 @@ VkCommandPoolCreateInfo Queue::getCommandPoolCreateInfo() const noexcept {
     return commandPoolCreateInfo;
 }
 
+VkSubmitInfo Queue::getSubmitInfo() const noexcept {
+    VkSubmitInfo submitInfo = {};
+
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = nullptr;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &this->buffer;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.signalSemaphoreCount = 0;
+    submitInfo.pSignalSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+
+    return submitInfo;
+}
+
 Result<std::shared_ptr<Queue>> Queue::createQueue(VkDevice device,
                                                   uint32 familyIndex,
                                                   uint32 queueIndex) {
@@ -89,4 +105,16 @@ Result<VkQueue> Queue::getVulkanQueue() const noexcept {
         return Result<VkQueue>(this->queue);
     else
         return Result<VkQueue>::createError(Error::FailedToRetrieveQueue);
+}
+
+Result<void> Queue::submit() const noexcept {
+    VkSubmitInfo submitInfo = this->getSubmitInfo();
+
+    VkResult result = vkQueueSubmit(this->queue, 1, &submitInfo, VK_NULL_HANDLE);
+    if (result == VK_SUCCESS) {
+        return Result<void>::createError(Error::None);
+    }
+    else {
+        return Result<void>::createError(Error::FailedToSubmitQueue);
+    }
 }

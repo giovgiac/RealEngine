@@ -38,6 +38,13 @@ Result<std::weak_ptr<const Instance>> GraphicsManager::getGraphicsInstance() con
         return Result<std::weak_ptr<const Instance>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
+Result<std::weak_ptr<const Renderer>> GraphicsManager::getRenderer() const noexcept {
+    if (this->renderer)
+        return Result<std::weak_ptr<const Renderer>>(this->renderer);
+    else
+        return Result<std::weak_ptr<const Renderer>>::createError(Error::GraphicsManagerNotStartedUp);
+}
+
 Result<void> GraphicsManager::startup() {
     std::cout << "Starting Up GraphicsManager..." << std::endl;
 

@@ -12,6 +12,7 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PoolAllocator.h"
+#include "Renderer.h"
 
 #include <iostream>
 #include <vulkan/vulkan.hpp>
@@ -45,46 +46,11 @@ int main() {
         }
     }
 
-    // Test Memory
-    const VkMemoryRequirements memoryRequirements = { 2048, 64, (1 << 5) | (1 << 6) | (1 << 8) };
-    VkMemoryPropertyFlags requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    Result<uint32> result = Memory::chooseHeapFromFlags(memoryRequirements, requiredFlags);
-    if (!result.hasError()) {
-        auto heap = static_cast<uint32>(result);
-        std::cout << "Chosen Heap: " << heap << std::endl;
-    }
-    else {
-        std::cout << "Memory Error: " << static_cast<uint32>(result.getError()) << std::endl;
-        return 1;
-    }
-
-    // Test Allocators
-    Result<std::shared_ptr<PoolAllocator>> rslt = PoolAllocator::createAllocator(4096, 64, 16, requiredFlags);
-    if (!rslt.hasError()) {
-        auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
-
-        // Allocate Some Memory
-        Result<std::unique_ptr<Memory>> res = allocator->allocate();
-
-        if (!res.hasError()) {
-            auto memory = static_cast<std::unique_ptr<Memory>>(res);
-
-            std::cout << "Testing Allocators..." << std::endl;
-            allocator->free(memory);
-        } else {
-            std::cout << "Allocator Error: " << static_cast<uint32>(res.getError()) << std::endl;
-            return 1;
-        }
-    }
-    else {
-        std::cout << "Allocator Error: " << static_cast<uint32>(rslt.getError()) << std::endl;
-        return 1;
-    }
-
     // Test Buffers
     Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(128, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    std::shared_ptr<Buffer> buffer = nullptr;
     if (!bufferResult.hasError()) {
-        auto buffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
+        buffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
         Result<VkBuffer> bufferRslt = buffer->getVulkanBuffer();
 
         if (!bufferRslt.hasError()) {
@@ -99,6 +65,49 @@ int main() {
     }
     else {
         std::cout << "Buffer Error: " << static_cast<uint32>(bufferResult.getError()) << std::endl;
+        return 1;
+    }
+
+    // Test Renderer
+    int data[32] = { 5, 4, 2, 1, 0, 2, 4, 5, 8, 10, 11 };
+    Result<std::weak_ptr<const Renderer>> rendererResult = graphicsManager.getRenderer();
+    if (!rendererResult.hasError()) {
+        auto weak_renderer = static_cast<std::weak_ptr<const Renderer>>(rendererResult);
+
+        if (std::shared_ptr<const Renderer> renderer = weak_renderer.lock()) {
+            // Configure Command
+            SetBufferInfo setBufferInfo = {};
+
+            setBufferInfo.buffer = buffer;
+            setBufferInfo.size = 128;
+            setBufferInfo.offset = 0;
+            setBufferInfo.data = &data;
+
+            // Send Command
+            Result<void> result = renderer->submit(Command::SetBuffer, setBufferInfo);
+            if (!result.hasError()) {
+                Result<void> rslt = renderer->flush();
+
+                if (!rslt.hasError()) {
+                    std::cout << "Successfully Used Set Buffer Command and Executed It..." << std::endl;
+                }
+                else {
+                    std::cout << "Flush Renderer Error: " << static_cast<uint32>(rslt.getError()) << std::endl;
+                    return 1;
+                }
+            }
+            else {
+                std::cout << "Submit Renderer Error: " << static_cast<uint32>(result.getError()) << std::endl;
+                return 1;
+            }
+        }
+        else {
+            std::cout << "Renderer Error: Failed To Solidify Pointer..." << std::endl;
+            return 1;
+        }
+    }
+    else {
+        std::cout << "Renderer Error: " << static_cast<uint32>(rendererResult.getError()) << std::endl;
         return 1;
     }
 

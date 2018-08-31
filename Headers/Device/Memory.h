@@ -72,6 +72,10 @@ public:
     static std::unique_ptr<Memory> createMemory(struct VkDeviceMemory_T *mem,
                                                 uint64 off, uint32 hp) noexcept;
 
+    inline struct VkDeviceMemory_T *getMemory() const noexcept { return this->memory; }
+
+    inline uint64 getMemoryOffset() const noexcept { return this->offset; }
+
 public:
     Memory(const Memory &) = delete;
     Memory(Memory &&) = delete;

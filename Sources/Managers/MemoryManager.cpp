@@ -5,18 +5,23 @@
  *
  */
 
-#include "MemoryManager.h"
+#include "Allocator.h"
 #include "Device.h"
 #include "GraphicsManager.h"
+#include "MemoryManager.h"
+#include "PoolAllocator.h"
 
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 
 MemoryManager::MemoryManager() {
-    memoryProperties = std::make_unique<VkPhysicalDeviceMemoryProperties>();
+    this->allocatorList = std::forward_list<std::shared_ptr<PoolAllocator>>();
+    this->memoryProperties = std::make_unique<VkPhysicalDeviceMemoryProperties>();
 }
 
 MemoryManager::~MemoryManager() {
+    this->allocatorList.clear();
+
     if (this->memoryProperties != nullptr)
         std::cout << "WARNING: MemoryManager deleted without being shutdown..." << std::endl,
         this->shutdown();
@@ -56,6 +61,31 @@ Result<VkPhysicalDeviceMemoryProperties> MemoryManager::getMemoryProperties() co
         return Result<VkPhysicalDeviceMemoryProperties>(*this->memoryProperties);
     else
         return Result<VkPhysicalDeviceMemoryProperties>::createError(Error::MemoryManagerNotStartedUp);
+}
+
+Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint64 alignment,
+                                                                           uint64 chunkSize) noexcept {
+    for (auto &alloc : allocatorList) {
+        if (alloc->getAllocatorAlignment() == alignment &&
+            alloc->getAllocatorChunkSize() == chunkSize) {
+
+            return Result<std::shared_ptr<PoolAllocator>>(alloc);
+        }
+    }
+
+    Result<std::shared_ptr<PoolAllocator>> result = PoolAllocator::createAllocator(chunkSize * 1000,
+                                                                                   chunkSize,
+                                                                                   alignment,
+                                                                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if (!result.hasError()) {
+        auto alloc = static_cast<std::shared_ptr<PoolAllocator>>(result);
+
+        this->allocatorList.push_front(alloc);
+        return Result<std::shared_ptr<PoolAllocator>>(alloc);
+    }
+
+    return Result<std::shared_ptr<PoolAllocator>>::createError(result.getError());
 }
 
 Result<void> MemoryManager::startup() {

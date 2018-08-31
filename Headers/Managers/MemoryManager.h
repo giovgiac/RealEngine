@@ -29,6 +29,8 @@
  */
 class MemoryManager final {
 private:
+    std::forward_list<std::shared_ptr<class PoolAllocator>> allocatorList;
+
     /* O atributo que guarda as propriedades da memória do dispositivo físico escolhido para rodar a aplicação. */
     std::unique_ptr<struct VkPhysicalDeviceMemoryProperties> memoryProperties;
 
@@ -86,6 +88,9 @@ public:
      *
      */
     Result<struct VkPhysicalDeviceMemoryProperties> getMemoryProperties() const noexcept;
+
+    Result<std::shared_ptr<class PoolAllocator>> requestPoolAllocator(uint64 alignment,
+                                                                      uint64 chunkSize) noexcept;
 
     /**
      * O método startup é fundamental e deve ser utilizado para inicializar o objeto do tipo MemoryManager antes de

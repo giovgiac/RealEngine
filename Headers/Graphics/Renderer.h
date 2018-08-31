@@ -24,14 +24,14 @@ public:
 
     virtual ~Renderer();
 
-    Result<void> flush() noexcept;
+    Result<void> flush() const noexcept;
 
     Result<void> startup();
 
     void shutdown();
 
-    Result<void> submit(Command cmd, CopyBufferInfo info) noexcept;
-    Result<void> submit(Command cmd, SetBufferInfo info) noexcept;
+    Result<void> submit(Command cmd, CopyBufferInfo info) const noexcept;
+    Result<void> submit(Command cmd, SetBufferInfo info) const noexcept;
 };
 
 #endif /* RENDERER_H_ */

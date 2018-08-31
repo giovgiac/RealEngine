@@ -20,7 +20,10 @@ struct CopyBufferInfo {
 };
 
 struct SetBufferInfo {
-
+    std::shared_ptr<class Buffer> buffer;
+    uint64 offset;
+    uint64 size;
+    void *data;
 };
 
 #endif /* COMMAND_H_ */
