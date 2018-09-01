@@ -100,7 +100,7 @@ protected:
      * reservada no dispositivo físico, onde poderá realizar múltiplas operações.
      *
      */
-    void allocateMemory();
+    Result<void> allocateMemory();
 
     /**
      * O método auxiliar getGraphicsDevice tem como objetivo adquirir o dispositivo lógico da aplicação através

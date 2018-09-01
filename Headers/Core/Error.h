@@ -24,6 +24,7 @@ enum class Error : uint16 {
     FailedToAllocateCommandBuffer,
     FailedToAllocateDeviceMemory,
     FailedToBindBufferMemory,
+    FailedToBindImageMemory,
     FailedToCreateBuffer,
     FailedToCreateImage,
     FailedToCreateCommandPool,

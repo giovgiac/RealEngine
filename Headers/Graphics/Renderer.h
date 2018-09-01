@@ -30,6 +30,7 @@ public:
 
     void shutdown();
 
+    Result<void> submit(Command cmd, ClearImageInfo info) const noexcept;
     Result<void> submit(Command cmd, CopyBufferInfo info) const noexcept;
     Result<void> submit(Command cmd, SetBufferInfo info) const noexcept;
 };

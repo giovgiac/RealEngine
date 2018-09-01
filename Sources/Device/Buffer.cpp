@@ -14,7 +14,7 @@
 #include "Queue.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 Buffer::Buffer() {
     this->buffer = VK_NULL_HANDLE;
@@ -36,12 +36,13 @@ Result<void> Buffer::allocateMemory() {
         VkMemoryRequirements memoryRequirements = {};
         vkGetBufferMemoryRequirements(device, this->buffer, &memoryRequirements);
 
+        // TODO: Select Proper Chunk Size for Allocator
         Result<std::shared_ptr<PoolAllocator>> rslt = memoryManager.requestPoolAllocator(memoryRequirements.alignment,
                                                                                          memoryRequirements.size);
 
         if (!rslt.hasError()) {
             auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
-            Result<std::unique_ptr<Memory>> res = allocator->allocate(this->size);
+            Result<std::unique_ptr<Memory>> res = allocator->allocate(memoryRequirements.size);
 
             if (!res.hasError()) {
                 this->memory = static_cast<std::unique_ptr<Memory>>(res);

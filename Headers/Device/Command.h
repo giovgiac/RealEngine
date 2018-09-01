@@ -11,12 +11,20 @@
 #include "Types.h"
 
 enum class Command : uint16 {
+    ClearImage,
     CopyBuffer,
     SetBuffer
 };
 
-struct CopyBufferInfo {
+struct ClearImageInfo {
 
+};
+
+struct CopyBufferInfo {
+    std::shared_ptr<class Buffer> src;
+    std::shared_ptr<class Buffer> dst;
+    uint32 regionCount;
+    const struct VkBufferCopy *regions;
 };
 
 struct SetBufferInfo {

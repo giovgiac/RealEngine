@@ -15,7 +15,7 @@
 #include "Renderer.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 int main() {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();

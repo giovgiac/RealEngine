@@ -9,10 +9,12 @@
 #include "Device.h"
 #include "GraphicsManager.h"
 #include "Memory.h"
+#include "MemoryManager.h"
+#include "PoolAllocator.h"
 #include "Queue.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 Image::Image() {
     this->image = VK_NULL_HANDLE;
@@ -30,8 +32,51 @@ Image::Image() {
     this->queueList = {};
 }
 
-void Image::allocateMemory() {
+Result<void> Image::allocateMemory() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+    MemoryManager &memoryManager = MemoryManager::getManager();
 
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+
+        // Get Memory Requirements
+        VkMemoryRequirements memoryRequirements = {};
+        vkGetImageMemoryRequirements(device, this->image, &memoryRequirements);
+
+        // TODO: Select Proper Chunk Size for Allocator
+        Result<std::shared_ptr<PoolAllocator>> rslt = memoryManager.requestPoolAllocator(memoryRequirements.alignment,
+                                                                                         memoryRequirements.size);
+
+        if (!rslt.hasError()) {
+            auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
+            Result<std::unique_ptr<Memory>> res = allocator->allocate(memoryRequirements.size);
+
+            if (!res.hasError()) {
+                this->memory = static_cast<std::unique_ptr<Memory>>(res);
+
+                // Bind Memory to Image
+                VkResult success = vkBindImageMemory(device,
+                                                     this->image,
+                                                     this->memory->getMemory(),
+                                                     this->memory->getMemoryOffset());
+
+                if (success == VK_SUCCESS) {
+                    return Result<void>::createError(Error::None);
+                }
+                else {
+                    return Result<void>::createError(Error::FailedToBindImageMemory);
+                }
+            }
+            else {
+                return Result<void>::createError(res.getError());
+            }
+        }
+        else {
+            return Result<void>::createError(rslt.getError());
+        }
+    }
+
+    return Result<void>::createError(result.getError());
 }
 
 Result<VkDevice> Image::getGraphicsDevice() const noexcept {
@@ -124,8 +169,14 @@ Result<std::shared_ptr<Image>> Image::createImage(VkExtent3D ext,
         VkResult rslt = vkCreateImage(device, &imageCreateInfo, nullptr, &image->image);
 
         if (rslt == VK_SUCCESS) {
-            image->allocateMemory();
-            return Result<std::shared_ptr<Image>>(std::move(image));
+            Result<void> res = image->allocateMemory();
+
+            if (!res.hasError()) {
+                return Result<std::shared_ptr<Image>>(std::move(image));
+            }
+            else {
+                return Result<std::shared_ptr<Image>>::createError(res.getError());
+            }
         }
         else
             return Result<std::shared_ptr<Image>>::createError(Error::FailedToCreateImage);
@@ -164,8 +215,14 @@ Result<std::shared_ptr<Image>> Image::createSharedImage(VkExtent3D ext,
         VkResult rslt = vkCreateImage(device, &imageCreateInfo, nullptr, &image->image);
 
         if (rslt == VK_SUCCESS) {
-            image->allocateMemory();
-            return Result<std::shared_ptr<Image>>(std::move(image));
+            Result<void> res = image->allocateMemory();
+
+            if (!res.hasError()) {
+                return Result<std::shared_ptr<Image>>(std::move(image));
+            }
+            else {
+                return Result<std::shared_ptr<Image>>::createError(res.getError());
+            }
         }
         else
             return Result<std::shared_ptr<Image>>::createError(Error::FailedToCreateImage);
