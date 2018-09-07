@@ -30,6 +30,17 @@ VkCommandBufferAllocateInfo Queue::getCommandBufferAllocateInfo() const noexcept
     return commandBufferAllocateInfo;
 }
 
+VkCommandBufferBeginInfo Queue::getCommandBufferBeginInfo() const noexcept {
+    VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+    
+    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    commandBufferBeginInfo.pNext = nullptr;
+    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    commandBufferBeginInfo.pInheritanceInfo = nullptr;
+    
+    return commandBufferBeginInfo;
+}
+
 VkCommandPoolCreateInfo Queue::getCommandPoolCreateInfo() const noexcept {
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
 
@@ -74,9 +85,17 @@ Result<std::shared_ptr<Queue>> Queue::createQueue(VkDevice device,
     if (result == VK_SUCCESS) {
         VkCommandBufferAllocateInfo commandBufferAllocateInfo = queue->getCommandBufferAllocateInfo();
         VkResult rslt = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &queue->buffer);
-
+        
         if (rslt == VK_SUCCESS) {
-            return Result<std::shared_ptr<Queue>>(std::move(queue));
+            VkCommandBufferBeginInfo commandBufferBeginInfo = queue->getCommandBufferBeginInfo();
+            
+            VkResult res = vkBeginCommandBuffer(queue->buffer, &commandBufferBeginInfo);
+            if (res == VK_SUCCESS) {
+                return Result<std::shared_ptr<Queue>>(std::move(queue));
+            }
+            else {
+                return Result<std::shared_ptr<Queue>>::createError(Error::FailedToAllocateCommandBuffer);
+            }
         }
         else {
             return Result<std::shared_ptr<Queue>>::createError(Error::FailedToAllocateCommandBuffer);
@@ -109,7 +128,8 @@ Result<VkQueue> Queue::getVulkanQueue() const noexcept {
 
 Result<void> Queue::submit() const noexcept {
     VkSubmitInfo submitInfo = this->getSubmitInfo();
-
+    
+    vkEndCommandBuffer(this->buffer);
     VkResult result = vkQueueSubmit(this->queue, 1, &submitInfo, VK_NULL_HANDLE);
     if (result == VK_SUCCESS) {
         return Result<void>::createError(Error::None);

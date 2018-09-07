@@ -34,9 +34,10 @@ VkInstanceCreateInfo Instance::getInstanceCreateInfo(VkApplicationInfo *applicat
     instanceCreateInfo.ppEnabledExtensionNames = nullptr;
     instanceCreateInfo.flags = 0;
 
-    if (this->bIsDebug)
-        instanceCreateInfo.enabledLayerCount = 0,
+    if (this->bIsDebug) {
+        instanceCreateInfo.enabledLayerCount = 0;
         instanceCreateInfo.ppEnabledLayerNames = nullptr;
+    }
 
     return instanceCreateInfo;
 }
@@ -53,9 +54,10 @@ Instance::~Instance() {
     this->applicationVersion = VK_MAKE_VERSION(0, 0, 0);
     this->bIsDebug = false;
 
-    if (this->instance != VK_NULL_HANDLE)
-        std::cout << "WARNING: Instance deleted without being shutdown..." << std::endl,
+    if (this->instance != VK_NULL_HANDLE) {
+        std::cout << "WARNING: Instance deleted without being shutdown..." << std::endl;
         this->shutdown();
+    }
 }
 
 Result<VkInstance> Instance::getVulkanInstance() const noexcept {

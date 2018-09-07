@@ -13,6 +13,8 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+const float queuePriorities[1] = { 0.0f };
+
 bool Device::checkPhysicalDeviceExtensions(VkPhysicalDevice pd) const noexcept {
     return true;
 }
@@ -136,9 +138,10 @@ VkDeviceCreateInfo Device::getDeviceCreateInfo(
     deviceCreateInfo.pEnabledFeatures = this->requiredFeatures.get();
     deviceCreateInfo.flags = 0;
 
-    if (this->bIsDebug)
-        deviceCreateInfo.enabledLayerCount = 0,
+    if (this->bIsDebug) {
+        deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = nullptr;
+    }
 
     return deviceCreateInfo;
 }
@@ -155,7 +158,7 @@ std::vector<VkDeviceQueueCreateInfo> Device::getDeviceQueueCreateInfo() const no
             createInfo.pNext = nullptr;
             createInfo.queueFamilyIndex = i;
             createInfo.queueCount = queueFamilyProperties[i].queueCount;
-            createInfo.pQueuePriorities = nullptr;
+            createInfo.pQueuePriorities = queuePriorities;
             createInfo.flags = 0;
 
             deviceQueueCreateInfo.push_back(createInfo);
@@ -243,9 +246,10 @@ Device::~Device() {
     this->requiredLimits = nullptr;
     this->bIsDebug = false;
 
-    if (this->device != VK_NULL_HANDLE || this->physicalDevice != VK_NULL_HANDLE)
-        std::cout << "WARNING: Device deleted without being shutdown..." << std::endl,
+    if (this->device != VK_NULL_HANDLE || this->physicalDevice != VK_NULL_HANDLE) {
+        std::cout << "WARNING: Device deleted without being shutdown..." << std::endl;
         this->shutdown();
+    }
 }
 
 const std::vector<std::shared_ptr<Queue>>& Device::getDeviceQueues() const noexcept {

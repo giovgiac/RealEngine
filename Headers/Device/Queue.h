@@ -40,6 +40,8 @@ protected:
     explicit Queue();
 
     struct VkCommandBufferAllocateInfo getCommandBufferAllocateInfo() const noexcept;
+    
+    struct VkCommandBufferBeginInfo getCommandBufferBeginInfo() const noexcept;
 
     struct VkCommandPoolCreateInfo getCommandPoolCreateInfo() const noexcept;
 

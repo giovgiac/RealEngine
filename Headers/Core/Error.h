@@ -28,6 +28,7 @@ enum class Error : uint16 {
     FailedToCreateBuffer,
     FailedToCreateImage,
     FailedToCreateCommandPool,
+    FailedToFlushRenderer,
     FailedToRetrieveBuffer,
     FailedToRetrieveImage,
     FailedToRetrieveQueue,

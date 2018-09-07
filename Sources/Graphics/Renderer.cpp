@@ -39,8 +39,6 @@ Renderer::~Renderer() {
 }
 
 Result<void> Renderer::flush() const noexcept {
-    // Check Mutexes for Queues
-    // Submit All Queues if Mutexes Available
     for (auto &queue : this->deviceQueues) {
         Result<void> result = queue->submit();
 
@@ -48,7 +46,18 @@ Result<void> Renderer::flush() const noexcept {
             return Result<void>::createError(result.getError());
         }
     }
-
+    
+    // Temporarily Wait For Device
+    Result<VkDevice> result = this->getGraphicsDevice();
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        
+        VkResult rslt = vkDeviceWaitIdle(device);
+        if (rslt != VK_SUCCESS) {
+            return Result<void>::createError(Error::FailedToFlushRenderer);
+        }
+    }
+    
     return Result<void>::createError(Error::None);
 }
 
@@ -75,12 +84,6 @@ void Renderer::shutdown() {
 Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) const noexcept {
     if (cmd != Command::CopyBuffer)
         return Result<void>::createError(Error::SubmitParametersNotMatching);
-
-    // Select Queue For Command
-    // Set Queue Mutex
-    // Process Command and Add to Queue
-    // vkCmdCopyBuffer()
-    // Unset Queue Mutex
 
     std::shared_ptr<Queue> randomQueue = this->deviceQueues[0];
 
@@ -120,12 +123,6 @@ Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) const noexcept {
 Result<void> Renderer::submit(Command cmd, SetBufferInfo info) const noexcept {
     if (cmd != Command::SetBuffer)
         return Result<void>::createError(Error::SubmitParametersNotMatching);
-
-    // Select Queue For Command
-    // Set Queue Mutex
-    // Process Command and Add to Queue
-    // vkCmdUpdateBuffer()
-    // Unset Queue Mutex
 
     std::shared_ptr<Queue> randomQueue = this->deviceQueues[0];
 

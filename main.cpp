@@ -17,6 +17,7 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+/*
 int main() {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
     MemoryManager &memoryManager = MemoryManager::getManager();
@@ -120,13 +121,13 @@ int main() {
                                                                     VK_IMAGE_USAGE_STORAGE_BIT,
                                                                     VK_FORMAT_R8G8B8A8_UNORM,
                                                                     VK_IMAGE_TILING_OPTIMAL);
+    
     if (!imageResult.hasError()) {
         auto image = static_cast<std::shared_ptr<Image>>(imageResult);
         Result<VkImage> imageRslt = image->getVulkanImage();
 
         if (!imageRslt.hasError()) {
             auto vulkanImage = static_cast<VkImage>(imageRslt);
-
             std::cout << "Created Image Resource: " << vulkanImage << std::endl;
         }
         else {
@@ -145,3 +146,4 @@ int main() {
 
     return EXIT_SUCCESS;
 }
+*/

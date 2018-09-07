@@ -19,9 +19,10 @@ GraphicsManager::GraphicsManager() {
 }
 
 GraphicsManager::~GraphicsManager() {
-    if (this->device != nullptr || this->instance != nullptr)
-        std::cout << "WARNING: GraphicsManager deleted without being shutdown..." << std::endl,
+    if (this->device != nullptr || this->instance != nullptr) {
+        std::cout << "WARNING: GraphicsManager deleted without being shutdown..." << std::endl;
         this->shutdown();
+    }
 }
 
 Result<std::weak_ptr<const Device>> GraphicsManager::getGraphicsDevice() const noexcept {
