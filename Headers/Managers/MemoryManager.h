@@ -90,7 +90,8 @@ public:
     Result<struct VkPhysicalDeviceMemoryProperties> getMemoryProperties() const noexcept;
 
     Result<std::shared_ptr<class PoolAllocator>> requestPoolAllocator(uint64 alignment,
-                                                                      uint64 chunkSize) noexcept;
+                                                                      uint64 chunkSize,
+                                                                      uint32 flags) noexcept;
 
     /**
      * O método startup é fundamental e deve ser utilizado para inicializar o objeto do tipo MemoryManager antes de

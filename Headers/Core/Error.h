@@ -29,10 +29,13 @@ enum class Error : uint16 {
     FailedToCreateImage,
     FailedToCreateCommandPool,
     FailedToFlushRenderer,
+    FailedToMapMemory,
     FailedToRetrieveBuffer,
     FailedToRetrieveImage,
     FailedToRetrieveQueue,
     FailedToSubmitQueue,
+    FailedToLoadImage,
+    FailedToLockPointer,
     IndexOutOfRange,
     InstanceNotStartedUp,
     DeviceNotStartedUp,
@@ -41,7 +44,8 @@ enum class Error : uint16 {
     NoPhysicalDeviceAvailable,
     FailedRetrievingPhysicalDevices,
     NoMemoryAvailableInAllocator,
-    SubmitParametersNotMatching
+    SubmitParametersNotMatching,
+    UnknownImageFormat,
 };
 
 #endif /* ERROR_H_ */

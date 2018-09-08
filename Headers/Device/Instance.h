@@ -47,6 +47,8 @@ private:
      * após a execução do método startup e será limpo após a chamada do método shutdown. */
     struct VkInstance_T *instance;
 
+    struct VkDebugUtilsMessengerEXT_T *callback;
+
 private:
     /**
      * O método cujo objetivo é criar e completar a estrutura VkApplicationInfo que contém informações sobre a engine
@@ -81,6 +83,8 @@ private:
      *
      */
     struct VkInstanceCreateInfo getInstanceCreateInfo(struct VkApplicationInfo *applicationInfo) const noexcept;
+
+    void setupDebug();
 
 public:
     /**

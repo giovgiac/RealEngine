@@ -17,6 +17,7 @@
 #include <vulkan/vulkan.h>
 
 Buffer::Buffer() {
+    this->allocator = nullptr;
     this->buffer = VK_NULL_HANDLE;
     this->memory = nullptr;
     this->queueList = {};
@@ -37,12 +38,15 @@ Result<void> Buffer::allocateMemory() {
         vkGetBufferMemoryRequirements(device, this->buffer, &memoryRequirements);
 
         // TODO: Select Proper Chunk Size for Allocator
-        Result<std::shared_ptr<PoolAllocator>> rslt = memoryManager.requestPoolAllocator(memoryRequirements.alignment,
-                                                                                         memoryRequirements.size);
+        Result<std::shared_ptr<PoolAllocator>> rslt =
+                memoryManager.requestPoolAllocator(memoryRequirements.alignment,
+                                                   memoryRequirements.size,
+                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         if (!rslt.hasError()) {
-            auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
-            Result<std::unique_ptr<Memory>> res = allocator->allocate(memoryRequirements.size);
+            this->allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
+            Result<std::unique_ptr<Memory>> res = this->allocator->allocate(memoryRequirements.size);
 
             if (!res.hasError()) {
                 this->memory = static_cast<std::unique_ptr<Memory>>(res);
@@ -192,9 +196,39 @@ Result<std::shared_ptr<Buffer>> Buffer::createSharedBuffer(VkDeviceSize siz,
     return Result<std::shared_ptr<Buffer>>::createError(result.getError());
 }
 
+Result<void> Buffer::fillBuffer(uint64 offset, uint64 size, void *data) {
+    Result<VkDevice> result = this->getGraphicsDevice();
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkDeviceMemory memory = this->memory->getMemory();
+
+        // Copy Data
+        void *mem;
+        VkResult res = vkMapMemory(device, memory, offset, size, 0, &mem);
+        if (res == VK_SUCCESS) {
+            memcpy(mem, data, size);
+            vkUnmapMemory(device, memory);
+
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToMapMemory);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
 Result<VkBuffer> Buffer::getVulkanBuffer() const noexcept {
     if (this->buffer != VK_NULL_HANDLE)
         return Result<VkBuffer>(this->buffer);
     else
         return Result<VkBuffer>::createError(Error::FailedToRetrieveBuffer);
+}
+
+Result<VkDeviceMemory> Buffer::getVulkanMemory() const noexcept {
+    if (this->memory != nullptr)
+        return Result<VkDeviceMemory>(this->memory->getMemory());
+    else
+        return Result<VkDeviceMemory>::createError(Error::FailedToRetrieveBuffer);
 }

@@ -64,7 +64,8 @@ Result<VkPhysicalDeviceMemoryProperties> MemoryManager::getMemoryProperties() co
 }
 
 Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint64 alignment,
-                                                                           uint64 chunkSize) noexcept {
+                                                                           uint64 chunkSize,
+                                                                           uint32 flags) noexcept {
     for (auto &alloc : allocatorList) {
         if (alloc->getAllocatorAlignment() == alignment &&
             alloc->getAllocatorChunkSize() == chunkSize) {
@@ -73,10 +74,11 @@ Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint6
         }
     }
 
-    Result<std::shared_ptr<PoolAllocator>> result = PoolAllocator::createAllocator(chunkSize * 1000,
-                                                                                   chunkSize,
-                                                                                   alignment,
-                                                                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    Result<std::shared_ptr<PoolAllocator>> result =
+            PoolAllocator::createAllocator(chunkSize * 10,
+                                           chunkSize,
+                                           alignment,
+                                           flags);
 
     if (!result.hasError()) {
         auto alloc = static_cast<std::shared_ptr<PoolAllocator>>(result);

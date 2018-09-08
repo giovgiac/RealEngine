@@ -124,6 +124,10 @@ protected:
      */
     struct VkImageCreateInfo getImageCreateInfo() const noexcept;
 
+    struct VkImageMemoryBarrier getImageMemoryBarrier(uint32 newLayout) const noexcept;
+
+    Result<std::shared_ptr<const class Renderer>> getRenderer() const noexcept;
+
 public:
     /**
      * O destrutor padrão de Image, cujo objetivo é retornar a memória associada para o alocador que a
@@ -181,6 +185,11 @@ public:
      *
      */
     Result<struct VkImage_T *> getVulkanImage() const noexcept;
+
+    void transitionLayout(struct VkCommandBuffer_T *cmdBuffer,
+                          uint32 newLayout,
+                          uint32 sourceStage,
+                          uint32 destinationStage);
 
 public:
     Image(const Image &) = delete;

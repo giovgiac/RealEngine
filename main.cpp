@@ -6,6 +6,7 @@
  */
 
 #include "Buffer.h"
+#include "Device.h"
 #include "GraphicsManager.h"
 #include "Image.h"
 #include "Instance.h"
@@ -13,11 +14,11 @@
 #include "MemoryManager.h"
 #include "PoolAllocator.h"
 #include "Renderer.h"
+#include "Texture.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
 
-/*
 int main() {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
     MemoryManager &memoryManager = MemoryManager::getManager();
@@ -47,8 +48,25 @@ int main() {
         }
     }
 
+    // Test Device
+    VkDevice device = VK_NULL_HANDLE;
+    Result<std::weak_ptr<const Device>> devRes = graphicsManager.getGraphicsDevice();
+    if (!res.hasError()) {
+        auto deviceAbs = static_cast<std::weak_ptr<const Device>>(devRes);
+
+        if (std::shared_ptr<const Device> dev = deviceAbs.lock()) {
+            Result<VkDevice> deviceResult = dev->getVulkanDevice();
+
+            if (!deviceResult.hasError()) {
+                device = static_cast<VkDevice>(deviceResult);
+
+                std::cout << "Vulkan Device: " << device << std::endl;
+            }
+        }
+    }
+
     // Test Buffers
-    Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(128, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(128, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     std::shared_ptr<Buffer> buffer = nullptr;
     if (!bufferResult.hasError()) {
         buffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
@@ -69,33 +87,64 @@ int main() {
         return 1;
     }
 
+    // Test Textures
+    Result<std::shared_ptr<Texture>> textureResult = Texture::createTextureFromFile("goku.png");
+    if (!textureResult.hasError()) {
+        auto texture = static_cast<std::shared_ptr<Texture>>(textureResult);
+
+        auto buffer = static_cast<std::weak_ptr<Buffer>>(texture->getBuffer());
+        if (std::shared_ptr<Buffer> buf = buffer.lock()) {
+            VkDeviceMemory mem = static_cast<VkDeviceMemory>(buf->getVulkanMemory());
+
+            void *readData;
+            uint8 *integerData;
+            vkMapMemory(device, mem, 0, VK_WHOLE_SIZE, 0, &readData);
+            integerData = static_cast<uint8*>(readData);
+            for (int i = 0; i < 32; i++)
+                std::cout << "Data in Buffer " << i << ": " << +(*(integerData + i)) << std::endl;
+            vkUnmapMemory(device, mem);
+        }
+        else {
+            std::cout << "Failed To Lock Texture..." << std::endl;
+            return 1;
+        }
+
+        Result<void> loadResult = texture->load();
+        if (!loadResult.hasError()) {
+            std::cout << "Successfully Loaded Texture..." << std::endl;
+        }
+        else {
+            std::cout << "Failed To Load Texture..." << std::endl;
+        }
+    }
+    else {
+        std::cout << "Texture Error: " << static_cast<uint32>(textureResult.getError()) << std::endl;
+        return 1;
+    }
+
     // Test Renderer
+    /*
     int data[32] = { 5, 4, 2, 1, 0, 2, 4, 5, 8, 10, 11 };
     Result<std::weak_ptr<const Renderer>> rendererResult = graphicsManager.getRenderer();
     if (!rendererResult.hasError()) {
         auto weak_renderer = static_cast<std::weak_ptr<const Renderer>>(rendererResult);
 
         if (std::shared_ptr<const Renderer> renderer = weak_renderer.lock()) {
-            // Configure Command
-            SetBufferInfo setBufferInfo = {};
+            // Set Buffer Data
+            Result<void> result = buffer->fillBuffer(0, 128, data);
 
-            setBufferInfo.buffer = buffer;
-            setBufferInfo.size = 128;
-            setBufferInfo.offset = 0;
-            setBufferInfo.data = &data;
-
-            // Send Command
-            Result<void> result = renderer->submit(Command::SetBuffer, setBufferInfo);
             if (!result.hasError()) {
-                Result<void> rslt = renderer->flush();
+                std::cout << "Successfully Copied Data To Buffer..." << std::endl;
 
-                if (!rslt.hasError()) {
-                    std::cout << "Successfully Used Set Buffer Command and Executed It..." << std::endl;
-                }
-                else {
-                    std::cout << "Flush Renderer Error: " << static_cast<uint32>(rslt.getError()) << std::endl;
-                    return 1;
-                }
+                VkDeviceMemory mem = static_cast<VkDeviceMemory>(buffer->getVulkanMemory());
+
+                void *readData;
+                int *integerData;
+                vkMapMemory(device, mem, 0, VK_WHOLE_SIZE, 0, &readData);
+                integerData = static_cast<int*>(readData);
+                for (int i = 0; i < 11; i++)
+                    std::cout << "Data in Buffer " << i << ": " << *(integerData + i) << std::endl;
+                vkUnmapMemory(device, mem);
             }
             else {
                 std::cout << "Submit Renderer Error: " << static_cast<uint32>(result.getError()) << std::endl;
@@ -111,6 +160,7 @@ int main() {
         std::cout << "Renderer Error: " << static_cast<uint32>(rendererResult.getError()) << std::endl;
         return 1;
     }
+    */
 
     // Test Images
     Result<std::shared_ptr<Image>> imageResult = Image::createImage({1024, 1024, 1},
@@ -146,4 +196,3 @@ int main() {
 
     return EXIT_SUCCESS;
 }
-*/

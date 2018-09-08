@@ -47,6 +47,8 @@ protected:
     /* O atributo que contém o uso para o qual este Buffer é destinado. */
     uint32 usage;
 
+    std::shared_ptr<class PoolAllocator> allocator;
+
     /* O atributo que guarda o unique_ptr da memória de vídeo associada à este Buffer. */
     std::unique_ptr<class Memory> memory;
 
@@ -133,6 +135,8 @@ public:
                                                               uint32 usg,
                                                               std::vector<std::weak_ptr<class Queue>> &queues);
 
+    Result<void> fillBuffer(uint64 offset, uint64 size, void *data);
+
     /**
      * Este método tem como objetivo permitir a obtenção da handle ao objeto do tipo VkBuffer para que outros
      * objetos possam realizar operações relacionadas à API Vulkan que necessitem utilizar a handle.
@@ -142,6 +146,8 @@ public:
      *
      */
     Result<struct VkBuffer_T *> getVulkanBuffer() const noexcept;
+
+    Result<struct VkDeviceMemory_T *> getVulkanMemory() const noexcept;
 
 public:
     Buffer(const Buffer &) = delete;

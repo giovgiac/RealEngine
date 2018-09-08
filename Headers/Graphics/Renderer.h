@@ -16,6 +16,8 @@ private:
 
     std::vector<std::shared_ptr<class Queue>> deviceQueues;
 
+    std::shared_ptr<class Queue> transferQueue;
+
 private:
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
@@ -24,15 +26,15 @@ public:
 
     virtual ~Renderer();
 
+    Result<void> executeTransferBuffer(struct VkCommandBuffer_T *cmdBuffer) const noexcept;
+
     Result<void> flush() const noexcept;
+
+    Result<struct VkCommandBuffer_T *> requestTransferBuffer() const noexcept;
 
     Result<void> startup();
 
     void shutdown();
-
-    Result<void> submit(Command cmd, ClearImageInfo info) const noexcept;
-    Result<void> submit(Command cmd, CopyBufferInfo info) const noexcept;
-    Result<void> submit(Command cmd, SetBufferInfo info) const noexcept;
 };
 
 #endif /* RENDERER_H_ */

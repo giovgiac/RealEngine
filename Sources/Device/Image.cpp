@@ -11,6 +11,7 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PoolAllocator.h"
+#include "Renderer.h"
 #include "Queue.h"
 
 #include <iostream>
@@ -44,8 +45,10 @@ Result<void> Image::allocateMemory() {
         vkGetImageMemoryRequirements(device, this->image, &memoryRequirements);
 
         // TODO: Select Proper Chunk Size for Allocator
-        Result<std::shared_ptr<PoolAllocator>> rslt = memoryManager.requestPoolAllocator(memoryRequirements.alignment,
-                                                                                         memoryRequirements.size);
+        Result<std::shared_ptr<PoolAllocator>> rslt =
+                memoryManager.requestPoolAllocator(memoryRequirements.alignment,
+                                                   memoryRequirements.size,
+                                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (!rslt.hasError()) {
             auto allocator = static_cast<std::shared_ptr<PoolAllocator>>(rslt);
@@ -122,6 +125,45 @@ VkImageCreateInfo Image::getImageCreateInfo() const noexcept {
     }
 
     return imageCreateInfo;
+}
+
+VkImageMemoryBarrier Image::getImageMemoryBarrier(uint32 newLayout) const noexcept {
+    VkImageMemoryBarrier imageMemoryBarrier = {};
+
+    imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imageMemoryBarrier.pNext = nullptr;
+    imageMemoryBarrier.image = this->image;
+    imageMemoryBarrier.srcAccessMask = 0;
+    imageMemoryBarrier.dstAccessMask = 0;
+    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.oldLayout = static_cast<VkImageLayout>(this->layout);
+    imageMemoryBarrier.newLayout = static_cast<VkImageLayout>(newLayout);
+    imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+    imageMemoryBarrier.subresourceRange.levelCount = this->mipLevels;
+    imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+    imageMemoryBarrier.subresourceRange.layerCount = this->arrayLayers;
+
+    return imageMemoryBarrier;
+}
+
+Result<std::shared_ptr<const Renderer>> Image::getRenderer() const noexcept {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    Result<std::weak_ptr<const Renderer>> result = graphicsManager.getRenderer();
+
+    if (!result.hasError()) {
+        auto rend = static_cast<std::weak_ptr<const Renderer>>(result);
+
+        if (std::shared_ptr<const Renderer> renderer = rend.lock()) {
+            return Result<std::shared_ptr<const Renderer>>(renderer);
+        }
+        else {
+            return Result<std::shared_ptr<const Renderer>>::createError(Error::FailedToLockPointer);
+        }
+    }
+
+    return Result<std::shared_ptr<const Renderer>>::createError(result.getError());
 }
 
 Image::~Image() {
@@ -236,4 +278,29 @@ Result<VkImage> Image::getVulkanImage() const noexcept {
         return Result<VkImage>(this->image);
     else
         return Result<VkImage>::createError(Error::FailedToRetrieveImage);
+}
+
+void Image::transitionLayout(VkCommandBuffer cmdBuffer,
+                             uint32 newLayout,
+                             VkPipelineStageFlags sourceStage,
+                             VkPipelineStageFlags destinationStage) {
+    Result<std::shared_ptr<const Renderer>> result = this->getRenderer();
+
+    if (!result.hasError()) {
+        auto renderer = static_cast<std::shared_ptr<const Renderer>>(result);
+        VkImageMemoryBarrier imageMemoryBarrier = this->getImageMemoryBarrier(newLayout);
+
+        vkCmdPipelineBarrier(cmdBuffer,
+                             sourceStage,
+                             destinationStage,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             1,
+                             &imageMemoryBarrier);
+
+        this->layout = newLayout;
+    }
 }
