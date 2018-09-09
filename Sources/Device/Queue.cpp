@@ -6,6 +6,7 @@
  */
 
 #include "Device.h"
+#include "GraphicsManager.h"
 #include "Queue.h"
 
 #include <vulkan/vulkan.h>
@@ -52,6 +53,22 @@ VkCommandPoolCreateInfo Queue::getCommandPoolCreateInfo() const noexcept {
     return commandPoolCreateInfo;
 }
 
+Result<VkDevice> Queue::getGraphicsDevice() const noexcept {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<std::weak_ptr<const Device>>(result);
+
+        if (std::shared_ptr<const Device> dev = device.lock())
+            return dev->getVulkanDevice();
+        else
+            return Result<VkDevice>::createError(Error::GraphicsManagerNotStartedUp);
+    }
+
+    return Result<VkDevice>::createError(result.getError());
+}
+
 VkSubmitInfo Queue::getSubmitInfo() const noexcept {
     VkSubmitInfo submitInfo = {};
 
@@ -66,6 +83,15 @@ VkSubmitInfo Queue::getSubmitInfo() const noexcept {
     submitInfo.pWaitDstStageMask = nullptr;
 
     return submitInfo;
+}
+
+Queue::~Queue() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        vkFreeCommandBuffers(device, this->pool, 1, &this->buffer);
+        vkDestroyCommandPool(device, this->pool, nullptr);
+    }
 }
 
 Result<std::shared_ptr<Queue>> Queue::createQueue(VkDevice device,

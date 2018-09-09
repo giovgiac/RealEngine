@@ -33,6 +33,7 @@ if (APPLE)
     # Find Library Locations
     find_library(FOUNDATION_LIBRARY Foundation)
     find_library(FREEIMAGE_LIBRARY FreeImage)
+    find_library(GLFW_LIBRARY GLFW)
     find_library(IOKIT_LIBRARY IOKit)
     find_library(IOSURFACE_LIBRARY IOSurface)
     find_library(LIBCPP_LIBRARY libc++.dylib)
@@ -45,6 +46,7 @@ if (APPLE)
     # Link Libraries
     link_libraries(${FOUNDATION_LIBRARY})
     link_libraries(${FREEIMAGE_LIBRARY})
+    link_libraries(${GLFW_LIBRARY})
     link_libraries(${IOKIT_LIBRARY})
     link_libraries(${IOSURFACE_LIBRARY})
     link_libraries(${LIBCPP_LIBRARY})
@@ -58,6 +60,7 @@ endif()
 if (UNIX AND NOT APPLE)
     # For Linux and BSD Operating Systems
     link_libraries(freeimage)
+    link_libraries(glfw)
     link_libraries(gtest)
     link_libraries(gtest_main)
     link_libraries(pthread)
@@ -79,7 +82,9 @@ set(HEADERS Headers/Core/Result.h
         Headers/Device/Queue.h
         Headers/Device/Image.h
         Headers/Graphics/Renderer.h
-        Headers/Device/Command.h Headers/Graphics/Texture.h)
+        Headers/Device/Command.h
+        Headers/Graphics/Texture.h
+        Headers/Graphics/Window.h)
 
 # Source Files
 set(SOURCES Sources/Device/Instance.cpp
@@ -91,6 +96,11 @@ set(SOURCES Sources/Device/Instance.cpp
         Sources/Device/Buffer.cpp
         Sources/Device/Image.cpp
         Sources/Device/Queue.cpp
-        Sources/Graphics/Renderer.cpp Tests/TestManagers.cpp Tests/TestManagerFixture.h Tests/TestResources.cpp Sources/Graphics/Texture.cpp)
+        Sources/Graphics/Renderer.cpp
+        Tests/TestManagers.cpp
+        Tests/TestManagerFixture.h
+        Tests/TestResources.cpp
+        Sources/Graphics/Texture.cpp
+        Sources/Graphics/Window.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

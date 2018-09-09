@@ -8,7 +8,10 @@
 #include "Instance.h"
 
 #include <iostream>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 
 const std::vector<const utf8 *> validationExtensions = {
         VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -69,22 +72,35 @@ VkApplicationInfo Instance::getApplicationInfo() const noexcept {
     return applicationInfo;
 }
 
-VkInstanceCreateInfo Instance::getInstanceCreateInfo(VkApplicationInfo *applicationInfo) const noexcept {
+std::vector<const utf8 *> Instance::getExtensions() const noexcept {
+    uint32 count = 0;
+    const char **ext = glfwGetRequiredInstanceExtensions(&count);
+    std::vector<const utf8 *> extensions = {};
+
+    extensions.resize(count);
+    for (uint32 i = 0; i < count; i++)
+        extensions[i] = ext[i];
+
+    return extensions;
+}
+
+VkInstanceCreateInfo Instance::getInstanceCreateInfo(VkApplicationInfo *applicationInfo,
+                                                     std::vector<const utf8 *> &extensions) const noexcept {
     VkInstanceCreateInfo instanceCreateInfo = {};
 
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pNext = nullptr;
     instanceCreateInfo.pApplicationInfo = applicationInfo;
-    instanceCreateInfo.enabledExtensionCount = 0;
-    instanceCreateInfo.ppEnabledExtensionNames = nullptr;
     instanceCreateInfo.flags = 0;
 
     if (this->bIsDebug) {
-        instanceCreateInfo.enabledExtensionCount = static_cast<uint32>(validationExtensions.size());
-        instanceCreateInfo.ppEnabledExtensionNames = validationExtensions.data();
+        extensions.insert(extensions.end(), validationExtensions.begin(), validationExtensions.end());
         instanceCreateInfo.enabledLayerCount = static_cast<uint32>(validationLayers.size());
         instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
     }
+
+    instanceCreateInfo.enabledExtensionCount = static_cast<uint32>(extensions.size());
+    instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
 
     return instanceCreateInfo;
 }
@@ -129,20 +145,26 @@ Result<VkInstance> Instance::getVulkanInstance() const noexcept {
 }
 
 Result<void> Instance::startup() {
-    VkApplicationInfo applicationInfo = this->getApplicationInfo();
-    VkInstanceCreateInfo instanceCreateInfo = this->getInstanceCreateInfo(&applicationInfo);
+    if (glfwInit()) {
+        std::vector<const utf8 *> extensions = this->getExtensions();
+        VkApplicationInfo applicationInfo = this->getApplicationInfo();
+        VkInstanceCreateInfo instanceCreateInfo = this->getInstanceCreateInfo(&applicationInfo, extensions);
 
-    VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &this->instance);
-    if (result == VK_SUCCESS) {
-        std::cout << "Created Device Instance..." << std::endl;
-        if (this->bIsDebug) {
-            setupDebug();
+        VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &this->instance);
+        if (result == VK_SUCCESS) {
+            std::cout << "Created Device Instance..." << std::endl;
+            if (this->bIsDebug) {
+                setupDebug();
+            }
+
+            return Result<void>::createError(Error::None);
         }
-
-        return Result<void>::createError(Error::None);
+        else {
+            return Result<void>::createError(Error::FailedToCreateInstance);
+        }
     }
 
-    return Result<void>::createError(Error::FailedToCreateInstance);
+    return Result<void>::createError(Error::FailedToInitializeGLFW);
 }
 
 void Instance::shutdown() {
@@ -152,6 +174,8 @@ void Instance::shutdown() {
 
     vkDestroyInstance(this->instance, nullptr);
     this->instance = VK_NULL_HANDLE;
+
+    glfwTerminate();
 
     std::cout << "Destroyed Device Instance..." << std::endl;
 }

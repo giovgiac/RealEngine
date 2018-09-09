@@ -45,9 +45,13 @@ protected:
 
     struct VkCommandPoolCreateInfo getCommandPoolCreateInfo() const noexcept;
 
+    Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
+
     struct VkSubmitInfo getSubmitInfo() const noexcept;
 
 public:
+    virtual ~Queue();
+
     static Result<std::shared_ptr<Queue>> createQueue(struct VkDevice_T *device,
                                                       uint32 familyIndex,
                                                       uint32 queueIndex);

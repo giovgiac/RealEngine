@@ -13,6 +13,7 @@
 #include "PoolAllocator.h"
 #include "Queue.h"
 
+#include <cstring>
 #include <iostream>
 #include <vulkan/vulkan.h>
 

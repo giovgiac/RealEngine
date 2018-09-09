@@ -67,6 +67,8 @@ private:
      */
     struct VkApplicationInfo getApplicationInfo() const noexcept;
 
+    std::vector<const utf8 *> getExtensions() const noexcept;
+
     /**
      * O metódo responsável por preencher a estrutura VkInstanceCreateInfo que determina as propriedades da instância
      * Vulkan que será criada. Este método precisa receber a estrutura VkApplicationInfo preenchida através de um
@@ -82,7 +84,8 @@ private:
      * Engine, caso um meio termo não seja encontrado a aplicação não será executado e retornará um erro.
      *
      */
-    struct VkInstanceCreateInfo getInstanceCreateInfo(struct VkApplicationInfo *applicationInfo) const noexcept;
+    struct VkInstanceCreateInfo getInstanceCreateInfo(struct VkApplicationInfo *applicationInfo,
+                                                      std::vector<const utf8 *> &extensions) const noexcept;
 
     void setupDebug();
 
@@ -134,11 +137,11 @@ public:
     void shutdown();
 
 public:
-    Instance(const Instance&) = delete;
-    Instance(Instance&&) = delete;
+    Instance(const Instance &) = delete;
+    Instance(Instance &&) = delete;
 
-    Instance& operator=(const Instance&) = delete;
-    Instance& operator=(Instance&&) = delete;
+    Instance &operator=(const Instance &) = delete;
+    Instance &operator=(Instance &&) = delete;
 };
 
 #endif /* INSTANCE_H_ */

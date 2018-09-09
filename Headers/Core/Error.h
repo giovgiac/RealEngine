@@ -28,7 +28,9 @@ enum class Error : uint16 {
     FailedToCreateBuffer,
     FailedToCreateImage,
     FailedToCreateCommandPool,
+    FailedToCreateSurface,
     FailedToFlushRenderer,
+    FailedToInitializeGLFW,
     FailedToMapMemory,
     FailedToRetrieveBuffer,
     FailedToRetrieveImage,
@@ -45,7 +47,7 @@ enum class Error : uint16 {
     FailedRetrievingPhysicalDevices,
     NoMemoryAvailableInAllocator,
     SubmitParametersNotMatching,
-    UnknownImageFormat,
+    UnknownImageFormat
 };
 
 #endif /* ERROR_H_ */
