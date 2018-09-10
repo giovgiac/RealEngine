@@ -22,8 +22,18 @@ private:
 
     struct VkSurfaceKHR_T *surface;
 
+    struct VkSwapchainKHR_T *swapchain;
+
 private:
+    Result<void> createVulkanWindowAndSurface();
+
+    Result<void> createVulkanSwapchain();
+
+    Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
+
     Result<struct VkInstance_T *> getGraphicsInstance() const noexcept;
+
+    struct VkSwapchainCreateInfoKHR getSwapchainCreateInfo() const noexcept;
 
 public:
     explicit Window(uint32 width, uint32 height, const utf8 *title);

@@ -76,10 +76,11 @@ std::vector<const utf8 *> Instance::getExtensions() const noexcept {
     uint32 count = 0;
     const char **ext = glfwGetRequiredInstanceExtensions(&count);
     std::vector<const utf8 *> extensions = {};
+    auto oldSize = static_cast<uint32>(extensions.size());
 
-    extensions.resize(count);
-    for (uint32 i = 0; i < count; i++)
-        extensions[i] = ext[i];
+    extensions.resize(oldSize + count);
+    for (uint32 i = oldSize; i < extensions.size(); i++)
+        extensions[i] = ext[i - oldSize];
 
     return extensions;
 }

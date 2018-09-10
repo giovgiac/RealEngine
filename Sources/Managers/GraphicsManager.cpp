@@ -50,7 +50,7 @@ Result<void> GraphicsManager::startup() {
     std::cout << "Starting Up GraphicsManager..." << std::endl;
 
     // Gather requirements
-    std::vector<const utf8 *> extensions = {};
+    std::vector<const utf8 *> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     VkPhysicalDeviceFeatures features = {};
     VkPhysicalDeviceLimits limits = {};
 

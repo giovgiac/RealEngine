@@ -29,6 +29,7 @@ enum class Error : uint16 {
     FailedToCreateImage,
     FailedToCreateCommandPool,
     FailedToCreateSurface,
+    FailedToCreateSwapchain,
     FailedToFlushRenderer,
     FailedToInitializeGLFW,
     FailedToMapMemory,
