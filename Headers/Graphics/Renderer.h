@@ -42,7 +42,6 @@ public:
 
     Renderer &operator=(const Renderer &) = delete;
     Renderer &operator=(Renderer &&) = delete;
-
 };
 
 #endif /* RENDERER_H_ */

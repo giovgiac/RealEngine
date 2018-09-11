@@ -16,6 +16,27 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+Result<void> Window::acquireVulkanImages() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        uint32 swapchainImageCount = 0;
+
+        if (vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, nullptr) == VK_SUCCESS) {
+            this->imageBuffers.resize(swapchainImageCount);
+            vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, this->imageBuffers.data());
+
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToAcquireVulkanImageBuffers);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
 Result<void> Window::createVulkanWindowAndSurface() {
     Result<VkInstance> result = this->getGraphicsInstance();
 
@@ -123,6 +144,9 @@ Window::Window(uint32 width, uint32 height, const utf8 *title) {
     this->width = width;
     this->height = height;
     this->title = title;
+    this->surface = VK_NULL_HANDLE;
+    this->swapchain = VK_NULL_HANDLE;
+    this->window = nullptr;
 }
 
 Window::~Window() {
@@ -151,10 +175,17 @@ Result<void> Window::startup() {
         return Result<void>::createError(swapchainResult.getError());
     }
 
+    Result<void> imagesResult = this->acquireVulkanImages();
+    if (imagesResult.hasError()) {
+        return Result<void>::createError(imagesResult.getError());
+    }
+
     return Result<void>::createError(Error::None);
 }
 
 void Window::shutdown() {
+    this->imageBuffers.clear();
+
     Result<VkDevice> deviceResult = this->getGraphicsDevice();
     if (!deviceResult.hasError()) {
         auto device = static_cast<VkDevice>(deviceResult);

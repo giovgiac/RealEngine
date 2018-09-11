@@ -10,6 +10,7 @@
 #include "GraphicsManager.h"
 #include "Image.h"
 #include "Instance.h"
+#include "Material.h"
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PoolAllocator.h"
@@ -189,6 +190,17 @@ int main() {
     // Test Window
     std::shared_ptr<Window> window = std::make_shared<Window>(640, 480, "Real Engine");
     window->startup();
+
+    // Test Materials
+    Result<std::shared_ptr<Material>> materialResult = Material::createMaterial("Shaders/vert.spv",
+                                                                                "Shaders/frag.spv");
+
+    if (!materialResult.hasError()) {
+        std::cout << "Material Successfully Created..." << std::endl;
+    }
+    else {
+        std::cout << "Material Error: " << static_cast<uint32>(materialResult.getError()) << std::endl;
+    }
 
     while (!window->shouldClose()) {
         window->pollEvents();

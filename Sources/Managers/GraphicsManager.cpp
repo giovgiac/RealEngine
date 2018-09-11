@@ -55,8 +55,8 @@ Result<void> GraphicsManager::startup() {
     VkPhysicalDeviceLimits limits = {};
 
     // Allocate objects
-    this->instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), false);
-    this->device = std::make_shared<Device>(extensions, features, limits, false);
+    this->instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), true);
+    this->device = std::make_shared<Device>(extensions, features, limits, true);
     this->renderer = std::make_shared<Renderer>();
 
     // Initialize objects

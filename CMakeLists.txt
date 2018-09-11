@@ -84,7 +84,8 @@ set(HEADERS Headers/Core/Result.h
         Headers/Graphics/Renderer.h
         Headers/Device/Command.h
         Headers/Graphics/Texture.h
-        Headers/Graphics/Window.h)
+        Headers/Graphics/Window.h
+        Headers/Graphics/Material.h)
 
 # Source Files
 set(SOURCES Sources/Device/Instance.cpp
@@ -101,6 +102,7 @@ set(SOURCES Sources/Device/Instance.cpp
         Tests/TestManagerFixture.h
         Tests/TestResources.cpp
         Sources/Graphics/Texture.cpp
-        Sources/Graphics/Window.cpp)
+        Sources/Graphics/Window.cpp
+        Sources/Graphics/Material.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

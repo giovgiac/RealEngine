@@ -13,7 +13,7 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
-const float queuePriorities[1] = { 0.0f };
+const float queuePriorities[] = {};
 
 bool Device::checkPhysicalDeviceExtensions(VkPhysicalDevice pd) const noexcept {
     return true;

@@ -24,7 +24,11 @@ private:
 
     struct VkSwapchainKHR_T *swapchain;
 
+    std::vector<struct VkImage_T *> imageBuffers;
+
 private:
+    Result<void> acquireVulkanImages();
+
     Result<void> createVulkanWindowAndSurface();
 
     Result<void> createVulkanSwapchain();
