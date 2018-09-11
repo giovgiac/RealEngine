@@ -15,6 +15,102 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+Result<void> Renderer::createDescriptorLayouts() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        std::vector<VkDescriptorSetLayoutBinding> bindings;
+        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo =
+                this->getDescriptorSetLayoutCreateInfo(&bindings);
+
+        if (vkCreateDescriptorSetLayout(device,
+                                        &descriptorSetLayoutCreateInfo,
+                                        nullptr,
+                                        &this->descriptorLayout) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreateDescriptorSetLayout);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createPipelineLayouts() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = this->getPipelineLayoutCreateInfo();
+
+        if (vkCreatePipelineLayout(device,
+                                   &pipelineLayoutCreateInfo,
+                                   nullptr,
+                                   &this->pipelineLayout) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreatePipelineLayout);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createPipelines() {
+    return Result<void>::createError(Error::None);
+}
+
+std::vector<VkDescriptorSetLayoutBinding> Renderer::getDescriptorSetLayoutBindings() const noexcept {
+    std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings (2);
+
+    // Configure Transform Bindings
+    descriptorSetLayoutBindings[0].binding = 0;
+    descriptorSetLayoutBindings[0].descriptorCount = 1;
+    descriptorSetLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorSetLayoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    descriptorSetLayoutBindings[0].pImmutableSamplers = nullptr;
+
+    // Configure Texture Bindings
+    descriptorSetLayoutBindings[1].binding = 1;
+    descriptorSetLayoutBindings[1].descriptorCount = 1;
+    descriptorSetLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorSetLayoutBindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    descriptorSetLayoutBindings[1].pImmutableSamplers = nullptr;
+
+    return descriptorSetLayoutBindings;
+}
+
+VkDescriptorSetLayoutCreateInfo Renderer::getDescriptorSetLayoutCreateInfo(
+        std::vector<VkDescriptorSetLayoutBinding> *bindings) const noexcept {
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
+    *bindings = this->getDescriptorSetLayoutBindings();
+
+    descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorSetLayoutCreateInfo.pNext = nullptr;
+    descriptorSetLayoutCreateInfo.flags = 0;
+    descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32>(bindings->size());
+    descriptorSetLayoutCreateInfo.pBindings = bindings->data();
+
+    return descriptorSetLayoutCreateInfo;
+}
+
+VkPipelineLayoutCreateInfo Renderer::getPipelineLayoutCreateInfo() const noexcept {
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.pNext = nullptr;
+    pipelineLayoutCreateInfo.flags = 0;
+    pipelineLayoutCreateInfo.setLayoutCount = 1;
+    pipelineLayoutCreateInfo.pSetLayouts = &this->descriptorLayout;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+    pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
+
+    return pipelineLayoutCreateInfo;
+}
+
 Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
     Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
@@ -31,8 +127,30 @@ Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
     return Result<VkDevice>::createError(result.getError());
 }
 
+Result<void> Renderer::loadQueues() {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<std::weak_ptr<const Device>>(result);
+
+        if (std::shared_ptr<const Device> dev = device.lock()) {
+            this->deviceQueues = dev->getDeviceQueues();
+            this->transferQueue = this->deviceQueues[this->deviceQueues.size() - 1];
+
+            return Result<void>::createError(Error::None);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
 Renderer::Renderer() {
+    this->descriptorLayout = VK_NULL_HANDLE;
+    this->pipelineLayout = VK_NULL_HANDLE;
+    this->pipeline = VK_NULL_HANDLE;
     this->deviceQueues = std::vector<std::shared_ptr<Queue>>();
+    this->transferQueue = nullptr;
 }
 
 Renderer::~Renderer() {
@@ -158,64 +276,51 @@ Result<VkCommandBuffer> Renderer::requestTransferBuffer() const noexcept {
 }
 
 Result<void> Renderer::startup() {
-    GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
-
-    if (!result.hasError()) {
-        auto device = static_cast<std::weak_ptr<const Device>>(result);
-
-        if (std::shared_ptr<const Device> dev = device.lock()) {
-            this->deviceQueues = dev->getDeviceQueues();
-            this->transferQueue = this->deviceQueues[this->deviceQueues.size() - 1];
-
-            return Result<void>::createError(Error::None);
-        }
+    Result<void> loadResult = this->loadQueues();
+    if (loadResult.hasError()) {
+        return Result<void>::createError(loadResult.getError());
     }
 
-    return Result<void>::createError(result.getError());
+    Result<void> descriptorLayoutResult = this->createDescriptorLayouts();
+    if (descriptorLayoutResult.hasError()) {
+        return Result<void>::createError(descriptorLayoutResult.getError());
+    }
+
+    Result<void> pipelineLayoutResult = this->createPipelineLayouts();
+    if (pipelineLayoutResult.hasError()) {
+        return Result<void>::createError(pipelineLayoutResult.getError());
+    }
+
+    Result<void> pipelineResult = this->createPipelines();
+    if (pipelineResult.hasError()) {
+        return Result<void>::createError(pipelineResult.getError());
+    }
+
+    return Result<void>::createError(Error::None);
 }
 
 void Renderer::shutdown() {
-    this->deviceQueues.clear();
-}
+    Result<VkDevice> result = this->getGraphicsDevice();
 
-/*
-Result<void> Renderer::submit(Command cmd, CopyBufferInfo info) const noexcept {
-    if (cmd != Command::CopyBuffer)
-        return Result<void>::createError(Error::SubmitParametersNotMatching);
-
-    std::shared_ptr<Queue> randomQueue = this->deviceQueues[0];
-
-    Result<VkCommandBuffer> result = randomQueue->getVulkanBuffer();
     if (!result.hasError()) {
-        auto commandBuffer = static_cast<VkCommandBuffer>(result);
+        auto device = static_cast<VkDevice>(result);
 
-        Result<VkBuffer> rslt = info.src->getVulkanBuffer();
-        if (!rslt.hasError()) {
-            auto src = static_cast<VkBuffer>(rslt);
-
-            Result<VkBuffer> res = info.dst->getVulkanBuffer();
-            if (!res.hasError()) {
-                auto dst = static_cast<VkBuffer>(res);
-
-                // Store Command For Execution
-                vkCmdCopyBuffer(commandBuffer,
-                                src,
-                                dst,
-                                info.regionCount,
-                                info.regions);
-
-                return Result<void>::createError(Error::None);
-            }
-            else {
-                return Result<void>::createError(res.getError());
-            }
+        if (this->pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(device, this->pipeline, nullptr);
+            this->pipeline = VK_NULL_HANDLE;
         }
-        else {
-            return Result<void>::createError(rslt.getError());
+
+        if (this->pipelineLayout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(device, this->pipelineLayout, nullptr);
+            this->pipelineLayout = VK_NULL_HANDLE;
+        }
+
+        if (this->descriptorLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(device, this->descriptorLayout, nullptr);
+            this->descriptorLayout = VK_NULL_HANDLE;
         }
     }
 
-    return Result<void>::createError(result.getError());
+    this->deviceQueues.clear();
+    this->transferQueue = nullptr;
 }
-*/

@@ -18,8 +18,29 @@ private:
 
     std::shared_ptr<class Queue> transferQueue;
 
+    struct VkDescriptorSetLayout_T *descriptorLayout;
+
+    struct VkPipelineLayout_T *pipelineLayout;
+
+    struct VkPipeline_T *pipeline;
+
 private:
+    Result<void> createDescriptorLayouts();
+
+    Result<void> createPipelineLayouts();
+
+    Result<void> createPipelines();
+
+    std::vector<struct VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings() const noexcept;
+
+    struct VkDescriptorSetLayoutCreateInfo
+    getDescriptorSetLayoutCreateInfo(std::vector<struct VkDescriptorSetLayoutBinding> *bindings) const noexcept;
+
+    struct VkPipelineLayoutCreateInfo getPipelineLayoutCreateInfo() const noexcept;
+
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
+
+    Result<void> loadQueues();
 
 public:
     explicit Renderer();

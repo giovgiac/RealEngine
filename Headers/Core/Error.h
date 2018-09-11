@@ -29,6 +29,8 @@ enum class Error : uint16 {
     FailedToCreateBuffer,
     FailedToCreateImage,
     FailedToCreateCommandPool,
+    FailedToCreateDescriptorSetLayout,
+    FailedToCreatePipelineLayout,
     FailedToCreateSurface,
     FailedToCreateSwapchain,
     FailedToCreateVertexShader,

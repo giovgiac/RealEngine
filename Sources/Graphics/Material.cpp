@@ -68,11 +68,15 @@ Material::~Material() {
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
 
-        vkDestroyShaderModule(device, this->fragmentShader, nullptr);
-        vkDestroyShaderModule(device, this->vertexShader, nullptr);
+        if (this->fragmentShader != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(device, this->fragmentShader, nullptr);
+            this->fragmentShader = VK_NULL_HANDLE;
+        }
 
-        this->fragmentShader = VK_NULL_HANDLE;
-        this->vertexShader = VK_NULL_HANDLE;
+        if (this->vertexShader != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(device, this->vertexShader, nullptr);
+            this->vertexShader = VK_NULL_HANDLE;
+        }
     }
 }
 

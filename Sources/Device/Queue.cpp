@@ -89,8 +89,16 @@ Queue::~Queue() {
     Result<VkDevice> result = this->getGraphicsDevice();
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
-        vkFreeCommandBuffers(device, this->pool, 1, &this->buffer);
-        vkDestroyCommandPool(device, this->pool, nullptr);
+
+        if (this->buffer != VK_NULL_HANDLE) {
+            vkFreeCommandBuffers(device, this->pool, 1, &this->buffer);
+            this->buffer = VK_NULL_HANDLE;
+        }
+
+        if (this->pool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(device, this->pool, nullptr);
+            this->pool = VK_NULL_HANDLE;
+        }
     }
 }
 
