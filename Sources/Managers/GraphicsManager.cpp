@@ -39,13 +39,6 @@ Result<std::weak_ptr<const Instance>> GraphicsManager::getGraphicsInstance() con
         return Result<std::weak_ptr<const Instance>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
-Result<std::weak_ptr<Renderer>> GraphicsManager::getRenderer() const noexcept {
-    if (this->renderer)
-        return Result<std::weak_ptr<Renderer>>(this->renderer);
-    else
-        return Result<std::weak_ptr<Renderer>>::createError(Error::GraphicsManagerNotStartedUp);
-}
-
 Result<void> GraphicsManager::startup() {
     std::cout << "Starting Up GraphicsManager..." << std::endl;
 
@@ -57,7 +50,6 @@ Result<void> GraphicsManager::startup() {
     // Allocate objects
     this->instance = std::make_shared<Instance>("Test Application", VK_MAKE_VERSION(1, 0, 0), true);
     this->device = std::make_shared<Device>(extensions, features, limits, true);
-    this->renderer = std::make_shared<Renderer>();
 
     // Initialize objects
     Result<void> instanceResult = this->instance->startup();
@@ -72,22 +64,14 @@ Result<void> GraphicsManager::startup() {
         return Result<void>::createError(deviceResult.getError());
     }
 
-    Result<void> rendererResult = this->renderer->startup();
-    if (rendererResult.hasError()) {
-        std::cout << "Failed To Start Up GraphicsManager - Renderer..." << std::endl;
-        return Result<void>::createError(rendererResult.getError());
-    }
-
     return Result<void>::createError(Error::None);
 }
 
 void GraphicsManager::shutdown() {
-    this->renderer->shutdown();
     this->device->shutdown();
     this->instance->shutdown();
 
     // Clear objects
-    this->renderer.reset();
     this->device.reset();
     this->instance.reset();
 

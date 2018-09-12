@@ -69,43 +69,47 @@ if (UNIX AND NOT APPLE)
 endif()
 
 # Header Files
-set(HEADERS Headers/Core/Result.h
-        Headers/Core/Error.h
+set(HEADERS Headers/Core/Error.h
+        Headers/Core/Result.h
         Headers/Core/Types.h
+        Headers/Device/Allocator.h
+        Headers/Device/Buffer.h
+        Headers/Device/Command.h
         Headers/Device/Instance.h
         Headers/Device/Device.h
-        Headers/Managers/GraphicsManager.h
         Headers/Device/Memory.h
-        Headers/Managers/MemoryManager.h
-        Headers/Device/Allocator.h
         Headers/Device/PoolAllocator.h
-        Headers/Device/Buffer.h
         Headers/Device/Queue.h
         Headers/Device/Image.h
+        Headers/Graphics/Material.h
         Headers/Graphics/Renderer.h
-        Headers/Device/Command.h
         Headers/Graphics/Texture.h
         Headers/Graphics/Window.h
-        Headers/Graphics/Material.h
-        Headers/Components/SpriteComponent.h Headers/Managers/WindowManager.h)
+        Headers/Components/SpriteComponent.h
+        Headers/Managers/GraphicsManager.h
+        Headers/Managers/MemoryManager.h
+        Headers/Managers/WindowManager.h
+        Headers/Managers/WorldManager.h
+        Tests/TestManagerFixture.h)
 
 # Source Files
-set(SOURCES Sources/Device/Instance.cpp
+set(SOURCES Sources/Device/Buffer.cpp
+        Sources/Device/Instance.cpp
         Sources/Device/Device.cpp
-        Sources/Managers/GraphicsManager.cpp
         Sources/Device/Memory.cpp
-        Sources/Managers/MemoryManager.cpp
         Sources/Device/PoolAllocator.cpp
-        Sources/Device/Buffer.cpp
         Sources/Device/Image.cpp
         Sources/Device/Queue.cpp
+        Sources/Graphics/Material.cpp
         Sources/Graphics/Renderer.cpp
         Sources/Graphics/Texture.cpp
         Sources/Graphics/Window.cpp
-        Sources/Graphics/Material.cpp
         Sources/Components/SpriteComponent.cpp
+        Sources/Managers/GraphicsManager.cpp
+        Sources/Managers/MemoryManager.cpp
+        Sources/Managers/WindowManager.cpp
+        Sources/Managers/WorldManager.cpp
         Tests/TestManagers.cpp
-        Tests/TestManagerFixture.h
-        Tests/TestResources.cpp Sources/Managers/WindowManager.cpp)
+        Tests/TestResources.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

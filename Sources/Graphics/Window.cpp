@@ -156,6 +156,24 @@ Window::~Window() {
     }
 }
 
+Result<VkSwapchainKHR> Window::getSwapchain() const noexcept {
+    if (this->swapchain != VK_NULL_HANDLE) {
+        return Result<VkSwapchainKHR>(this->swapchain);
+    }
+    else {
+        return Result<VkSwapchainKHR>::createError(Error::WindowNotStartedUp);
+    }
+}
+
+Result<std::vector<VkImage>> Window::getImageBuffers() const noexcept {
+    if (!this->imageBuffers.empty()) {
+        return Result<std::vector<VkImage>>(this->imageBuffers);
+    }
+    else {
+        return Result<std::vector<VkImage>>::createError(Error::WindowNotStartedUp);
+    }
+}
+
 void Window::pollEvents() const noexcept {
     glfwPollEvents();
 }

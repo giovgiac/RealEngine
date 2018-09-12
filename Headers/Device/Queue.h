@@ -47,7 +47,11 @@ protected:
 
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
-    struct VkSubmitInfo getSubmitInfo() const noexcept;
+    struct VkSubmitInfo getSubmitInfo(struct VkSemaphore_T *const *signals,
+                                      uint32 signalCount,
+                                      struct VkSemaphore_T *const *waits,
+                                      uint32 waitCount,
+                                      uint32 *stages) const noexcept;
 
 public:
     virtual ~Queue();
@@ -66,7 +70,11 @@ public:
 
     void resetBuffers();
 
-    Result<void> submit() const noexcept;
+    Result<void> submit(struct VkSemaphore_T *const *signals,
+                        uint32 signalCount,
+                        struct VkSemaphore_T *const *waits,
+                        uint32 waitCount,
+                        uint32 *stages) const noexcept;
 
 public:
     Queue(const Queue &) = delete;

@@ -14,9 +14,40 @@
 #include "SpriteComponent.h"
 #include "Queue.h"
 #include "Texture.h"
+#include "Window.h"
+#include "WindowManager.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
+
+Result<void> Renderer::acquireSwapchainAndBuffers() {
+    WindowManager &windowManager = WindowManager::getManager();
+    Result<std::shared_ptr<Window>> result = windowManager.getWindow();
+
+    if (!result.hasError()) {
+        auto window = static_cast<std::shared_ptr<Window>>(result);
+
+        Result<VkSwapchainKHR> rslt = window->getSwapchain();
+        if (rslt.hasError()) {
+            return Result<void>::createError(rslt.getError());
+        }
+        else {
+            this->swapchain = static_cast<VkSwapchainKHR>(rslt);
+        }
+
+        Result<std::vector<VkImage>> res = window->getImageBuffers();
+        if (res.hasError()) {
+            return Result<void>::createError(res.getError());
+        }
+        else {
+            this->imageBuffers = static_cast<std::vector<VkImage>>(res);
+        }
+
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
 
 Result<void> Renderer::allocateDescriptorSets() {
     Result<VkDevice> result = this->getGraphicsDevice();
@@ -110,6 +141,49 @@ Result<void> Renderer::createPipelines() {
     return Result<void>::createError(Error::None);
 }
 
+Result<void> Renderer::createSemaphores() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkSemaphoreCreateInfo semaphoreCreateInfo = this->getSemaphoreCreateInfo();
+
+        // Create Image Buffer Semaphore
+        if (vkCreateSemaphore(device,
+                              &semaphoreCreateInfo,
+                              nullptr,
+                              &this->imageSemaphore) != VK_SUCCESS) {
+            return Result<void>::createError(Error::FailedToCreateSemaphore);
+        }
+
+        // Create Queue Semaphores
+        this->queueSemaphores.resize(this->deviceQueues.size() - 1);
+        for (uint32 i = 0; i < static_cast<uint32>(this->deviceQueues.size() - 1); i++) {
+            if (vkCreateSemaphore(device,
+                                  &semaphoreCreateInfo,
+                                  nullptr,
+                                  &this->queueSemaphores[i]) != VK_SUCCESS) {
+                return Result<void>::createError(Error::FailedToCreateSemaphore);
+            }
+        }
+
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createTransformBuffer() {
+    Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(sizeof(Transform),
+                                                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    if (bufferResult.hasError()) {
+        return Result<void>::createError(bufferResult.getError());
+    }
+
+    this->transformBuffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
+    return Result<void>::createError(Error::None);
+}
+
 VkDescriptorSetAllocateInfo Renderer::getDescriptorSetAllocateInfo() const noexcept {
     VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
 
@@ -197,6 +271,31 @@ VkPipelineLayoutCreateInfo Renderer::getPipelineLayoutCreateInfo() const noexcep
     return pipelineLayoutCreateInfo;
 }
 
+VkPresentInfoKHR Renderer::getPresentInfoKHR() const noexcept {
+    VkPresentInfoKHR presentInfoKHR = {};
+
+    presentInfoKHR.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfoKHR.pNext = nullptr;
+    presentInfoKHR.waitSemaphoreCount = 1;
+    presentInfoKHR.pWaitSemaphores = &this->queueSemaphores[0];
+    presentInfoKHR.swapchainCount = 1;
+    presentInfoKHR.pSwapchains = &this->swapchain;
+    presentInfoKHR.pImageIndices = &this->imageIndex;
+    presentInfoKHR.pResults = nullptr;
+
+    return presentInfoKHR;
+}
+
+VkSemaphoreCreateInfo Renderer::getSemaphoreCreateInfo() const noexcept {
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCreateInfo.pNext = nullptr;
+    semaphoreCreateInfo.flags = 0;
+
+    return semaphoreCreateInfo;
+}
+
 Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
     Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
@@ -231,51 +330,13 @@ Result<void> Renderer::loadQueues() {
     return Result<void>::createError(result.getError());
 }
 
-Renderer::Renderer() {
-    this->descriptorLayout = VK_NULL_HANDLE;
-    this->pipelineLayout = VK_NULL_HANDLE;
-    this->pipeline = VK_NULL_HANDLE;
-    this->deviceQueues = std::vector<std::shared_ptr<Queue>>();
-    this->transferQueue = nullptr;
+VkCommandBuffer Renderer::selectCommandBuffer() const noexcept {
+    Result<VkCommandBuffer> cmdBuffer = this->deviceQueues[0]->getVulkanBuffer();
+    return static_cast<VkCommandBuffer>(cmdBuffer);
 }
 
-Renderer::~Renderer() {
-    if (!this->deviceQueues.empty() || this->transferQueue != nullptr || this->pipeline != VK_NULL_HANDLE ||
-        this->pipelineLayout != VK_NULL_HANDLE || this->descriptorLayout != VK_NULL_HANDLE) {
-        std::cout << "WARNING: Renderer deleted without being shutdown..." << std::endl;
-        this->shutdown();
-    }
-}
-
-Result<void> Renderer::begin() {
-    Result<VkDevice> result = this->getGraphicsDevice();
-
-    if (!result.hasError()) {
-        this->device = static_cast<VkDevice>(result);
-
-        for (auto &queue : this->deviceQueues) {
-            if (queue != this->transferQueue) {
-                queue->bindPipeline(this->pipeline);
-            }
-        }
-
-        if (this->transformBuffer == VK_NULL_HANDLE) {
-            Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(sizeof(Transform),
-                                                                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-            if (bufferResult.hasError()) {
-                return Result<void>::createError(bufferResult.getError());
-            }
-            this->transformBuffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
-        }
-
-        return Result<void>::createError(Error::None);
-    }
-
-    return Result<void>::createError(result.getError());
-}
-
-void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
-    Transform matrixTransform;
+void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComponent) {
+    Transform matrixTransform = {};
     VkDescriptorBufferInfo descriptorBufferInfo = {};
     VkDescriptorImageInfo descriptorImageInfo = {};
     VkWriteDescriptorSet writeDescriptorSet[2] = {};
@@ -331,7 +392,75 @@ void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
                            nullptr);
 }
 
+Renderer::Renderer() {
+    this->descriptorLayout = VK_NULL_HANDLE;
+    this->pipelineLayout = VK_NULL_HANDLE;
+    this->pipeline = VK_NULL_HANDLE;
+    this->deviceQueues = std::vector<std::shared_ptr<Queue>>();
+    this->transferQueue = nullptr;
+}
+
+Renderer::~Renderer() {
+    if (!this->deviceQueues.empty() || this->transferQueue != nullptr || this->pipeline != VK_NULL_HANDLE ||
+        this->pipelineLayout != VK_NULL_HANDLE || this->descriptorLayout != VK_NULL_HANDLE) {
+        std::cout << "WARNING: Renderer deleted without being shutdown..." << std::endl;
+        this->shutdown();
+    }
+}
+
+Result<void> Renderer::begin() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        this->device = static_cast<VkDevice>(result);
+
+        // Bind Pipelines
+        for (auto &queue : this->deviceQueues) {
+            if (queue != this->transferQueue) {
+                queue->bindPipeline(this->pipeline);
+            }
+        }
+
+        // Acquire Next Image
+        if (vkAcquireNextImageKHR(this->device,
+                                  this->swapchain,
+                                  0,
+                                  this->imageSemaphore,
+                                  VK_NULL_HANDLE,
+                                  &this->imageIndex) != VK_SUCCESS) {
+            return Result<void>::createError(Error::FailedToAcquireNextImage);
+        }
+
+        std::cout << "Image Index: " << this->imageIndex << std::endl;
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
+    VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
+
+    this->updateDescriptorSets(spriteComponent);
+
+}
+
 Result<void> Renderer::end() {
+    auto queue = static_cast<VkQueue>(this->deviceQueues[0]->getVulkanQueue());
+    VkPipelineStageFlags stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    VkPresentInfoKHR presentInfoKHR = this->getPresentInfoKHR();
+
+    // Submit Buffers
+    this->deviceQueues[0]->submit(&this->queueSemaphores[0], 1, &this->imageSemaphore, 1, &stage);
+
+    if (vkQueuePresentKHR(queue, &presentInfoKHR) != VK_SUCCESS) {
+        return Result<void>::createError(Error::FailedToPresentImage);
+    }
+
+    // Reset Buffers
+    vkDeviceWaitIdle(this->device);
+    this->deviceQueues[0]->resetBuffers();
+
     return Result<void>::createError(Error::None);
 }
 
@@ -382,29 +511,6 @@ Result<void> Renderer::executeTransferBuffer(VkCommandBuffer cmdBuffer) const no
     }
 
     return Result<void>::createError(result.getError());
-}
-
-Result<void> Renderer::flush() const noexcept {
-    for (auto &queue : this->deviceQueues) {
-        Result<void> result = queue->submit();
-
-        if (result.hasError()) {
-            return Result<void>::createError(result.getError());
-        }
-    }
-    
-    // Temporarily Wait For Device
-    Result<VkDevice> result = this->getGraphicsDevice();
-    if (!result.hasError()) {
-        auto device = static_cast<VkDevice>(result);
-        
-        VkResult rslt = vkDeviceWaitIdle(device);
-        if (rslt != VK_SUCCESS) {
-            return Result<void>::createError(Error::FailedToFlushRenderer);
-        }
-    }
-    
-    return Result<void>::createError(Error::None);
 }
 
 Result<VkCommandBuffer> Renderer::requestTransferBuffer() const noexcept {
@@ -481,6 +587,21 @@ Result<void> Renderer::startup() {
         return Result<void>::createError(pipelineResult.getError());
     }
 
+    Result<void> swapchainAndBuffersResult = this->acquireSwapchainAndBuffers();
+    if (swapchainAndBuffersResult.hasError()) {
+        return Result<void>::createError(swapchainAndBuffersResult.getError());
+    }
+
+    Result<void> transformResult = this->createTransformBuffer();
+    if (transformResult.hasError()) {
+        return Result<void>::createError(transformResult.getError());
+    }
+
+    Result<void> semaphoreResult = this->createSemaphores();
+    if (semaphoreResult.hasError()) {
+        return Result<void>::createError(semaphoreResult.getError());
+    }
+
     return Result<void>::createError(Error::None);
 }
 
@@ -489,6 +610,21 @@ void Renderer::shutdown() {
 
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
+
+        // Finish Work
+        vkDeviceWaitIdle(device);
+
+        for (auto &semaphore : this->queueSemaphores) {
+            if (semaphore != VK_NULL_HANDLE) {
+                vkDestroySemaphore(device, semaphore, nullptr);
+                semaphore = VK_NULL_HANDLE;
+            }
+        }
+
+        if (this->imageSemaphore != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, this->imageSemaphore, nullptr);
+            this->imageSemaphore = VK_NULL_HANDLE;
+        }
 
         if (this->pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(device, this->pipeline, nullptr);

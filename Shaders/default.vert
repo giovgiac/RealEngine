@@ -7,11 +7,11 @@
 
 #version 450 core
 
-layout(set = 0, binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform transforms {
     mat4 model;
     mat4 view;
     mat4 proj;
-} ubo;
+} transform;
 
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 color;
@@ -26,7 +26,7 @@ out gl_PerVertex {
 
 void main() {
     // Set Vertex Position
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(position, 1.0);
+    gl_Position = transform.proj * transform.view * transform.model * vec4(position, 1.0);
 
     // Pass To Fragment Shader
     fragColor = color;

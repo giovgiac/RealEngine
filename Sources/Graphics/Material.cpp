@@ -33,7 +33,7 @@ Result<VkDevice> Material::getGraphicsDevice() const noexcept {
     return Result<VkDevice>::createError(result.getError());
 }
 
-VkShaderModuleCreateInfo Material::getShaderModuleCreateInfo(std::vector<char> code) const noexcept {
+VkShaderModuleCreateInfo Material::getShaderModuleCreateInfo(const std::vector<char> &code) const noexcept {
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
 
     shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

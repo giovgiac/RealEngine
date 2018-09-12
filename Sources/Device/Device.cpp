@@ -13,8 +13,6 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
-const float queuePriorities[] = {};
-
 bool Device::checkPhysicalDeviceExtensions(VkPhysicalDevice pd) const noexcept {
     return true;
 }
@@ -106,7 +104,8 @@ Result<void> Device::createQueues(std::vector<struct VkDeviceQueueCreateInfo> *d
 }
 
 Result<void> Device::createVulkanDevice() {
-    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfo = this->getDeviceQueueCreateInfo();
+    std::vector<float> queuePriorities;
+    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfo = this->getDeviceQueueCreateInfo(&queuePriorities);
     VkDeviceCreateInfo deviceCreateInfo = this->getDeviceCreateInfo(&deviceQueueCreateInfo);
 
     if (this->physicalDevice != VK_NULL_HANDLE) {
@@ -146,7 +145,8 @@ VkDeviceCreateInfo Device::getDeviceCreateInfo(
     return deviceCreateInfo;
 }
 
-std::vector<VkDeviceQueueCreateInfo> Device::getDeviceQueueCreateInfo() const noexcept {
+std::vector<VkDeviceQueueCreateInfo> Device::getDeviceQueueCreateInfo(
+        std::vector<float> *queuePriorities) const noexcept {
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfo = {};
     std::vector<VkQueueFamilyProperties> queueFamilyProperties = this->getPhysicalDeviceQueueFamilyProperties();
 
@@ -154,11 +154,14 @@ std::vector<VkDeviceQueueCreateInfo> Device::getDeviceQueueCreateInfo() const no
         if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             VkDeviceQueueCreateInfo createInfo = {};
 
+            queuePriorities->resize(queueFamilyProperties[i].queueCount);
+            queuePriorities->assign(queueFamilyProperties[i].queueCount, 0.0f);
+
             createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             createInfo.pNext = nullptr;
             createInfo.queueFamilyIndex = i;
             createInfo.queueCount = queueFamilyProperties[i].queueCount;
-            createInfo.pQueuePriorities = queuePriorities;
+            createInfo.pQueuePriorities = queuePriorities->data();
             createInfo.flags = 0;
 
             deviceQueueCreateInfo.push_back(createInfo);

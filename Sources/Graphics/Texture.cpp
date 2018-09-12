@@ -11,6 +11,7 @@
 #include "Image.h"
 #include "Renderer.h"
 #include "Texture.h"
+#include "WorldManager.h"
 
 #include <FreeImage.h>
 #include <vulkan/vulkan.h>
@@ -85,21 +86,8 @@ Result<VkDevice> Texture::getGraphicsDevice() const noexcept {
 }
 
 Result<std::shared_ptr<Renderer>> Texture::getRenderer() const noexcept {
-    GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    Result<std::weak_ptr<Renderer>> result = graphicsManager.getRenderer();
-
-    if (!result.hasError()) {
-        auto rend = static_cast<std::weak_ptr<Renderer>>(result);
-
-        if (std::shared_ptr<Renderer> renderer = rend.lock()) {
-            return Result<std::shared_ptr<Renderer>>(renderer);
-        }
-        else {
-            return Result<std::shared_ptr<Renderer>>::createError(Error::FailedToLockPointer);
-        }
-    }
-
-    return Result<std::shared_ptr<Renderer>>::createError(result.getError());
+    WorldManager &worldManager = WorldManager::getManager();
+    return worldManager.getRenderer();
 }
 
 Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {

@@ -22,7 +22,7 @@ private:
 
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
-    struct VkShaderModuleCreateInfo getShaderModuleCreateInfo(std::vector<char> code) const noexcept;
+    struct VkShaderModuleCreateInfo getShaderModuleCreateInfo(const std::vector<char> &code) const noexcept;
 
     Result<std::vector<char>> readShaderFile(const utf8 *filename) const noexcept;
 

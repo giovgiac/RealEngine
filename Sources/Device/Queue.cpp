@@ -36,7 +36,7 @@ VkCommandBufferBeginInfo Queue::getCommandBufferBeginInfo() const noexcept {
     
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     commandBufferBeginInfo.pNext = nullptr;
-    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
     
     return commandBufferBeginInfo;
@@ -69,18 +69,22 @@ Result<VkDevice> Queue::getGraphicsDevice() const noexcept {
     return Result<VkDevice>::createError(result.getError());
 }
 
-VkSubmitInfo Queue::getSubmitInfo() const noexcept {
+VkSubmitInfo Queue::getSubmitInfo(VkSemaphore const *signals,
+                                  uint32 signalCount,
+                                  VkSemaphore const *waits,
+                                  uint32 waitCount,
+                                  uint32 *stages) const noexcept {
     VkSubmitInfo submitInfo = {};
 
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.pNext = nullptr;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &this->buffer;
-    submitInfo.waitSemaphoreCount = 0;
-    submitInfo.pWaitSemaphores = nullptr;
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.pSignalSemaphores = nullptr;
-    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.waitSemaphoreCount = waitCount;
+    submitInfo.pWaitSemaphores = waits;
+    submitInfo.signalSemaphoreCount = signalCount;
+    submitInfo.pSignalSemaphores = signals;
+    submitInfo.pWaitDstStageMask = stages;
 
     return submitInfo;
 }
@@ -165,11 +169,18 @@ Result<VkQueue> Queue::getVulkanQueue() const noexcept {
 }
 
 void Queue::resetBuffers() {
+    VkCommandBufferBeginInfo commandBufferBeginInfo = this->getCommandBufferBeginInfo();
+
     vkResetCommandBuffer(this->buffer, 0);
+    vkBeginCommandBuffer(this->buffer, &commandBufferBeginInfo);
 }
 
-Result<void> Queue::submit() const noexcept {
-    VkSubmitInfo submitInfo = this->getSubmitInfo();
+Result<void> Queue::submit(VkSemaphore const *signals,
+                           uint32 signalCount,
+                           VkSemaphore const *waits,
+                           uint32 waitCount,
+                           uint32 *stages) const noexcept {
+    VkSubmitInfo submitInfo = this->getSubmitInfo(signals, signalCount, waits, waitCount, stages);
     
     vkEndCommandBuffer(this->buffer);
     VkResult result = vkQueueSubmit(this->queue, 1, &submitInfo, VK_NULL_HANDLE);

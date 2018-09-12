@@ -36,8 +36,6 @@ private:
      * próprio objeto no método startup. */
     std::shared_ptr<class Instance> instance;
 
-    std::shared_ptr<class Renderer> renderer;
-
 private:
     /**
      * O construtor padrão de GraphicsManager e que não pode ser utilizado. O seu único objetivo é resetar os valores
@@ -64,8 +62,6 @@ public:
      *
      */
     Result<std::weak_ptr<const class Instance>> getGraphicsInstance() const noexcept;
-
-    Result<std::weak_ptr<class Renderer>> getRenderer() const noexcept;
 
     /**
      * O método getManager tem como objetivo retornar uma referência para a instância única do GraphicsManager, com a

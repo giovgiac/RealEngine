@@ -18,6 +18,8 @@
 #include "SpriteComponent.h"
 #include "Texture.h"
 #include "Window.h"
+#include "WindowManager.h"
+#include "WorldManager.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
@@ -25,15 +27,29 @@
 int main() {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
     MemoryManager &memoryManager = MemoryManager::getManager();
+    WindowManager &windowManager = WindowManager::getManager();
+    WorldManager &worldManager = WorldManager::getManager();
 
     // Startup Managers
     Result<void> graphicsResult = graphicsManager.startup();
-    if (graphicsResult.hasError())
+    if (graphicsResult.hasError()) {
         return 1;
+    }
 
     Result<void> memoryResult = memoryManager.startup();
-    if (memoryResult.hasError())
+    if (memoryResult.hasError()) {
         return 1;
+    }
+
+    Result<void> windowResult = windowManager.startup();
+    if (windowResult.hasError()) {
+        return 1;
+    }
+
+    Result<void> worldResult = worldManager.startup();
+    if (worldResult.hasError()) {
+        return 1;
+    }
 
     // Test Instance
     {
@@ -126,7 +142,7 @@ int main() {
                                                                         VK_IMAGE_TYPE_2D,
                                                                         1,
                                                                         8,
-                                                                        VK_IMAGE_USAGE_SAMPLED_BIT &
+                                                                        VK_IMAGE_USAGE_SAMPLED_BIT |
                                                                         VK_IMAGE_USAGE_STORAGE_BIT,
                                                                         VK_FORMAT_R8G8B8A8_UNORM,
                                                                         VK_IMAGE_TILING_OPTIMAL);
@@ -148,10 +164,6 @@ int main() {
         }
     }
 
-    // Test Window
-    std::shared_ptr<Window> window = std::make_shared<Window>(640, 480, "Real Engine");
-    window->startup();
-
     // Test Materials
     {
         Result<std::shared_ptr<Material>> materialResult = Material::createMaterial("Shaders/vert.spv",
@@ -164,47 +176,16 @@ int main() {
         }
     }
 
-    // Test Rendering
-    {
-        // Acquire Renderer
-        std::shared_ptr<Renderer> renderer = nullptr;
-        Result<std::weak_ptr<Renderer>> rendererResult = graphicsManager.getRenderer();
-
-        if (!rendererResult.hasError()) {
-            auto weak_renderer = static_cast<std::weak_ptr<Renderer>>(rendererResult);
-            renderer = weak_renderer.lock();
-        }
-
-        // Create Sprite
-        std::shared_ptr<SpriteComponent> spriteComponent = nullptr;
-        Result<std::shared_ptr<SpriteComponent>> spriteResult
-                = SpriteComponent::createSpriteComponent(glm::vec2(0.0f, 0.0f),
-                                                         glm::angleAxis(glm::radians(0.0f),
-                                                                        glm::vec3(0.0f,
-                                                                                  1.0f,
-                                                                                  0.0f)),
-                                                         glm::vec2(1.0f, 1.0f),
-                                                         "goku.png",
-                                                         "Shaders/vert.spv",
-                                                         "Shaders/frag.spv");
-
-        if (!spriteResult.hasError()) {
-            spriteComponent = static_cast<std::shared_ptr<SpriteComponent>>(spriteResult);
-            spriteComponent->load();
-        }
-
-        while (!window->shouldClose()) {
-            // Render Loop
-            renderer->begin();
-            renderer->draw(spriteComponent);
-            renderer->end();
-
-            window->pollEvents();
-        }
+    // Test Render Loop
+    Result<void> playResult = worldManager.play();
+    if (playResult.hasError()) {
+        std::cout << "Render Loop Error: " << static_cast<uint32>(playResult.getError()) << std::endl;
+        return 1;
     }
 
-    window->shutdown();
     // Shutdown Managers
+    worldManager.shutdown();
+    windowManager.shutdown();
     memoryManager.shutdown();
     graphicsManager.shutdown();
 

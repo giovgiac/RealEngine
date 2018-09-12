@@ -13,6 +13,7 @@
 #include "PoolAllocator.h"
 #include "Renderer.h"
 #include "Queue.h"
+#include "WorldManager.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
@@ -166,21 +167,8 @@ VkImageMemoryBarrier Image::getImageMemoryBarrier(uint32 newLayout) const noexce
 }
 
 Result<std::shared_ptr<Renderer>> Image::getRenderer() const noexcept {
-    GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    Result<std::weak_ptr<Renderer>> result = graphicsManager.getRenderer();
-
-    if (!result.hasError()) {
-        auto rend = static_cast<std::weak_ptr<Renderer>>(result);
-
-        if (std::shared_ptr<Renderer> renderer = rend.lock()) {
-            return Result<std::shared_ptr<Renderer>>(renderer);
-        }
-        else {
-            return Result<std::shared_ptr<Renderer>>::createError(Error::FailedToLockPointer);
-        }
-    }
-
-    return Result<std::shared_ptr<Renderer>>::createError(result.getError());
+    WorldManager &worldManager = WorldManager::getManager();
+    return worldManager.getRenderer();
 }
 
 Image::~Image() {

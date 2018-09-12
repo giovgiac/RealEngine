@@ -30,9 +30,21 @@ private:
 
     struct VkDevice_T *device;
 
+    struct VkSwapchainKHR_T *swapchain;
+
+    std::vector<struct VkImage_T *> imageBuffers;
+
     std::shared_ptr<class Buffer> transformBuffer;
 
+    struct VkSemaphore_T *imageSemaphore;
+
+    std::vector<struct VkSemaphore_T *> queueSemaphores;
+
+    uint32 imageIndex;
+
 private:
+    Result<void> acquireSwapchainAndBuffers();
+
     Result<void> allocateDescriptorSets();
 
     Result<void> createDescriptorLayouts();
@@ -42,6 +54,10 @@ private:
     Result<void> createPipelineLayouts();
 
     Result<void> createPipelines();
+
+    Result<void> createSemaphores();
+
+    Result<void> createTransformBuffer();
 
     struct VkDescriptorSetAllocateInfo getDescriptorSetAllocateInfo() const noexcept;
 
@@ -57,9 +73,17 @@ private:
 
     struct VkPipelineLayoutCreateInfo getPipelineLayoutCreateInfo() const noexcept;
 
+    struct VkPresentInfoKHR getPresentInfoKHR() const noexcept;
+
+    struct VkSemaphoreCreateInfo getSemaphoreCreateInfo() const noexcept;
+
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
     Result<void> loadQueues();
+
+    struct VkCommandBuffer_T *selectCommandBuffer() const noexcept;
+
+    void updateDescriptorSets(std::shared_ptr<class SpriteComponent> &spriteComponent);
 
 public:
     explicit Renderer();
@@ -73,8 +97,6 @@ public:
     Result<void> end();
 
     Result<void> executeTransferBuffer(struct VkCommandBuffer_T *cmdBuffer) const noexcept;
-
-    Result<void> flush() const noexcept;
 
     Result<struct VkCommandBuffer_T *> requestTransferBuffer() const noexcept;
 

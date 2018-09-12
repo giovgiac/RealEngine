@@ -113,7 +113,8 @@ private:
      * lógico, reservando-as para o uso da aplicação.
      *
      */
-    std::vector<struct VkDeviceQueueCreateInfo> getDeviceQueueCreateInfo() const noexcept;
+    std::vector<struct VkDeviceQueueCreateInfo> getDeviceQueueCreateInfo(
+            std::vector<float> *queuePriorities) const noexcept;
 
     /**
      * Um método auxiliar que obtém as propriedades das famílias de filas de processamento gráfico do dispositivo
