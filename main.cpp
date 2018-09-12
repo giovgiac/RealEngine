@@ -121,46 +121,6 @@ int main() {
             return 1;
         }
 
-        // Test Renderer
-        /*
-        int data[32] = { 5, 4, 2, 1, 0, 2, 4, 5, 8, 10, 11 };
-        Result<std::weak_ptr<const Renderer>> rendererResult = graphicsManager.getRenderer();
-        if (!rendererResult.hasError()) {
-            auto weak_renderer = static_cast<std::weak_ptr<const Renderer>>(rendererResult);
-
-            if (std::shared_ptr<const Renderer> renderer = weak_renderer.lock()) {
-                // Set Buffer Data
-                Result<void> result = buffer->fillBuffer(0, 128, data);
-
-                if (!result.hasError()) {
-                    std::cout << "Successfully Copied Data To Buffer..." << std::endl;
-
-                    VkDeviceMemory mem = static_cast<VkDeviceMemory>(buffer->getVulkanMemory());
-
-                    void *readData;
-                    int *integerData;
-                    vkMapMemory(device, mem, 0, VK_WHOLE_SIZE, 0, &readData);
-                    integerData = static_cast<int*>(readData);
-                    for (int i = 0; i < 11; i++)
-                        std::cout << "Data in Buffer " << i << ": " << *(integerData + i) << std::endl;
-                    vkUnmapMemory(device, mem);
-                }
-                else {
-                    std::cout << "Submit Renderer Error: " << static_cast<uint32>(result.getError()) << std::endl;
-                    return 1;
-                }
-            }
-            else {
-                std::cout << "Renderer Error: Failed To Solidify Pointer..." << std::endl;
-                return 1;
-            }
-        }
-        else {
-            std::cout << "Renderer Error: " << static_cast<uint32>(rendererResult.getError()) << std::endl;
-            return 1;
-        }
-        */
-
         // Test Images
         Result<std::shared_ptr<Image>> imageResult = Image::createImage({1024, 1024, 1},
                                                                         VK_IMAGE_TYPE_2D,

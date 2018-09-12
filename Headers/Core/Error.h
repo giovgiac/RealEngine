@@ -53,6 +53,7 @@ enum class Error : uint16 {
     DeviceNotStartedUp,
     GraphicsManagerNotStartedUp,
     MemoryManagerNotStartedUp,
+    WindowManagerNotStartedUp,
     NoPhysicalDeviceAvailable,
     FailedRetrievingPhysicalDevices,
     NoMemoryAvailableInAllocator,

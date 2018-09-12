@@ -87,7 +87,7 @@ set(HEADERS Headers/Core/Result.h
         Headers/Graphics/Texture.h
         Headers/Graphics/Window.h
         Headers/Graphics/Material.h
-        Headers/Components/SpriteComponent.h)
+        Headers/Components/SpriteComponent.h Headers/Managers/WindowManager.h)
 
 # Source Files
 set(SOURCES Sources/Device/Instance.cpp
@@ -106,6 +106,6 @@ set(SOURCES Sources/Device/Instance.cpp
         Sources/Components/SpriteComponent.cpp
         Tests/TestManagers.cpp
         Tests/TestManagerFixture.h
-        Tests/TestResources.cpp)
+        Tests/TestResources.cpp Sources/Managers/WindowManager.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})
