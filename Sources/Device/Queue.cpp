@@ -107,7 +107,7 @@ Queue::~Queue() {
 }
 
 void Queue::bindPipeline(VkPipeline pipeline) {
-    //vkCmdBindPipeline(this->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(this->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
 Result<std::shared_ptr<Queue>> Queue::createQueue(VkDevice device,

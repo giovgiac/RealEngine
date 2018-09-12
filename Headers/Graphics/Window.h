@@ -44,9 +44,13 @@ public:
 
     virtual ~Window();
 
+    Result<std::vector<struct VkImage_T *>> getImageBuffers() const noexcept;
+
     Result<struct VkSwapchainKHR_T *> getSwapchain() const noexcept;
 
-    Result<std::vector<struct VkImage_T *>> getImageBuffers() const noexcept;
+    inline uint32 getHeight() const noexcept { return this->height; }
+
+    inline uint32 getWidth() const noexcept { return this->width; }
 
     void pollEvents() const noexcept;
 

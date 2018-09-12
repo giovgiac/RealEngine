@@ -8,7 +8,6 @@
 #ifndef RENDERER_H_
 #define RENDERER_H_
 
-#include "Command.h"
 #include "Result.h"
 
 class Renderer final {
@@ -32,7 +31,9 @@ private:
 
     struct VkSwapchainKHR_T *swapchain;
 
-    std::vector<struct VkImage_T *> imageBuffers;
+    std::vector<struct VkImageView_T *> imageBuffers;
+
+    uint32 imageIndex;
 
     std::shared_ptr<class Buffer> transformBuffer;
 
@@ -40,7 +41,17 @@ private:
 
     std::vector<struct VkSemaphore_T *> queueSemaphores;
 
-    uint32 imageIndex;
+    struct VkSampler_T *textureSampler;
+
+    struct VkRenderPass_T *renderPass;
+
+    std::vector<struct VkFramebuffer_T *> framebuffers;
+
+    std::shared_ptr<class Material> material;
+
+    uint32 width;
+
+    uint32 height;
 
 private:
     Result<void> acquireSwapchainAndBuffers();
@@ -51,13 +62,30 @@ private:
 
     Result<void> createDescriptorPool();
 
+    Result<void> createMaterial();
+
+    Result<void> createFramebuffers();
+
     Result<void> createPipelineLayouts();
 
-    Result<void> createPipelines();
+    Result<void> createPipeline();
+
+    Result<void> createRenderPass();
 
     Result<void> createSemaphores();
 
+    Result<void> createTextureSampler();
+
     Result<void> createTransformBuffer();
+
+    std::vector<struct VkAttachmentDescription> getAttachmentDescription() const noexcept;
+
+    struct VkAttachmentReference getAttachmentReference() const noexcept;
+
+    struct VkPipelineColorBlendAttachmentState getColorBlendAttachmentState() const noexcept;
+
+    struct VkPipelineColorBlendStateCreateInfo getColorBlendStateCreateInfo(
+            struct VkPipelineColorBlendAttachmentState *attachmentState) const noexcept;
 
     struct VkDescriptorSetAllocateInfo getDescriptorSetAllocateInfo() const noexcept;
 
@@ -71,13 +99,50 @@ private:
     struct VkDescriptorSetLayoutCreateInfo getDescriptorSetLayoutCreateInfo(
             std::vector<struct VkDescriptorSetLayoutBinding> *bindings) const noexcept;
 
+    struct VkFramebufferCreateInfo getFramebufferCreateInfo(
+            uint32 imageIndex) const noexcept;
+
+    struct VkGraphicsPipelineCreateInfo getGraphicsPipelineCreateInfo(
+            std::vector<struct VkPipelineShaderStageCreateInfo> *shaderStages,
+            struct VkPipelineVertexInputStateCreateInfo *vertexInputState,
+            struct VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
+            struct VkPipelineViewportStateCreateInfo *viewportState,
+            struct VkPipelineRasterizationStateCreateInfo *rasterizationState,
+            struct VkPipelineColorBlendStateCreateInfo *colorBlendState
+    ) const noexcept;
+
+    struct VkPipelineInputAssemblyStateCreateInfo getInputAssemblyStateCreateInfo() const noexcept;
+
     struct VkPipelineLayoutCreateInfo getPipelineLayoutCreateInfo() const noexcept;
 
     struct VkPresentInfoKHR getPresentInfoKHR() const noexcept;
 
+    struct VkPipelineRasterizationStateCreateInfo getRasterizationStateCreateInfo() const noexcept;
+
+    struct VkRect2D getRect2D() const noexcept;
+
+    struct VkRenderPassCreateInfo getRenderPassCreateInfo(
+            std::vector<struct VkAttachmentDescription> *attachments,
+            std::vector<struct VkSubpassDescription> *subpasses) const noexcept;
+
+    struct VkSamplerCreateInfo getSamplerCreateInfo() const noexcept;
+
     struct VkSemaphoreCreateInfo getSemaphoreCreateInfo() const noexcept;
 
+    std::vector<struct VkPipelineShaderStageCreateInfo> getShaderStageCreateInfo() const noexcept;
+
+    std::vector<struct VkSubpassDescription> getSubpassDescription(
+            struct VkAttachmentReference *attachmentReference) const noexcept;
+
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
+
+    struct VkPipelineVertexInputStateCreateInfo getVertexInputStateCreateInfo() const noexcept;
+
+    struct VkViewport getViewport() const noexcept;
+
+    struct VkPipelineViewportStateCreateInfo getViewportStateCreateInfo(
+            struct VkViewport *viewport,
+            struct VkRect2D *rect) const noexcept;
 
     Result<void> loadQueues();
 

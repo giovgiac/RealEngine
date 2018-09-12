@@ -32,6 +32,10 @@ public:
     static Result<std::shared_ptr<Material>> createMaterial(const utf8 *vertexFilename,
                                                             const utf8 *fragmentFilename);
 
+    inline struct VkShaderModule_T *getFragmentModule() { return this->fragmentShader; }
+
+    inline struct VkShaderModule_T *getVertexModule() { return this->vertexShader; }
+
 public:
     Material(const Material &) = delete;
     Material(Material &&) = delete;

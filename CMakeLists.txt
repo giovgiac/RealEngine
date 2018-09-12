@@ -74,7 +74,6 @@ set(HEADERS Headers/Core/Error.h
         Headers/Core/Types.h
         Headers/Device/Allocator.h
         Headers/Device/Buffer.h
-        Headers/Device/Command.h
         Headers/Device/Instance.h
         Headers/Device/Device.h
         Headers/Device/Memory.h

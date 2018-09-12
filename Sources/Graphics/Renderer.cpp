@@ -40,8 +40,48 @@ Result<void> Renderer::acquireSwapchainAndBuffers() {
             return Result<void>::createError(res.getError());
         }
         else {
-            this->imageBuffers = static_cast<std::vector<VkImage>>(res);
+            auto images = static_cast<std::vector<VkImage>>(res);
+            Result<VkDevice> deviceResult = this->getGraphicsDevice();
+
+            if (!deviceResult.hasError()) {
+                auto device = static_cast<VkDevice>(deviceResult);
+
+                this->imageBuffers.resize(images.size());
+                for (uint32 i = 0; i < static_cast<uint32>(images.size()); i++) {
+                    VkImageViewCreateInfo imageViewCreateInfo = {};
+
+                    // Configure Image View
+                    imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                    imageViewCreateInfo.pNext = nullptr;
+                    imageViewCreateInfo.flags = 0;
+                    imageViewCreateInfo.image = images[i];
+                    imageViewCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+                    imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+                    imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+                    imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+                    imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+                    imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+                    imageViewCreateInfo.subresourceRange.levelCount = 1;
+                    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+                    imageViewCreateInfo.subresourceRange.layerCount = 1;
+                    imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+                    if (vkCreateImageView(device,
+                            &imageViewCreateInfo,
+                            nullptr,
+                            &this->imageBuffers[i]) != VK_SUCCESS) {
+                        return Result<void>::createError(Error::FailedToCreateImageView);
+                    }
+                }
+            }
+            else {
+                return Result<void>::createError(deviceResult.getError());
+            }
         }
+
+        this->width = window->getWidth();
+        this->height = window->getHeight();
 
         return Result<void>::createError(Error::None);
     }
@@ -116,6 +156,42 @@ Result<void> Renderer::createDescriptorPool() {
     return Result<void>::createError(result.getError());
 }
 
+Result<void> Renderer::createMaterial() {
+    Result<std::shared_ptr<Material>> result = Material::createMaterial("Shaders/vert.spv",
+                                                                        "Shaders/frag.spv");
+
+    if (!result.hasError()) {
+        this->material = static_cast<std::shared_ptr<Material>>(result);
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createFramebuffers() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+
+        this->framebuffers.resize(this->imageBuffers.size());
+        for (uint32 i = 0; i < static_cast<uint32>(this->imageBuffers.size()); i++) {
+            VkFramebufferCreateInfo framebufferCreateInfo = this->getFramebufferCreateInfo(i);
+
+            if (vkCreateFramebuffer(device,
+                                    &framebufferCreateInfo,
+                                    nullptr,
+                                    &this->framebuffers[i]) != VK_SUCCESS) {
+                return Result<void>::createError(Error::FailedToCreateFramebuffer);
+            }
+        }
+
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
 Result<void> Renderer::createPipelineLayouts() {
     Result<VkDevice> result = this->getGraphicsDevice();
 
@@ -137,8 +213,68 @@ Result<void> Renderer::createPipelineLayouts() {
     return Result<void>::createError(result.getError());
 }
 
-Result<void> Renderer::createPipelines() {
-    return Result<void>::createError(Error::None);
+Result<void> Renderer::createPipeline() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkPipelineColorBlendAttachmentState attachmentState = this->getColorBlendAttachmentState();
+        VkViewport viewport = this->getViewport();
+        VkRect2D rect = this->getRect2D();
+        std::vector<VkPipelineShaderStageCreateInfo> shaderStages = this->getShaderStageCreateInfo();
+        VkPipelineVertexInputStateCreateInfo vertexInputState = this->getVertexInputStateCreateInfo();
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = this->getInputAssemblyStateCreateInfo();
+        VkPipelineViewportStateCreateInfo viewportState = this->getViewportStateCreateInfo(&viewport,
+                                                                                           &rect);
+        VkPipelineRasterizationStateCreateInfo rasterizationState = this->getRasterizationStateCreateInfo();
+        VkPipelineColorBlendStateCreateInfo colorBlendState = this->getColorBlendStateCreateInfo(&attachmentState);
+        VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo
+                = this->getGraphicsPipelineCreateInfo(&shaderStages,
+                                                      &vertexInputState,
+                                                      &inputAssemblyState,
+                                                      &viewportState,
+                                                      &rasterizationState,
+                                                      &colorBlendState);
+
+        if (vkCreateGraphicsPipelines(device,
+                                      VK_NULL_HANDLE,
+                                      1,
+                                      &graphicsPipelineCreateInfo,
+                                      nullptr,
+                                      &this->pipeline) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreateGraphicsPipeline);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createRenderPass() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        std::vector<VkAttachmentDescription> attachments = this->getAttachmentDescription();
+        VkAttachmentReference reference = this->getAttachmentReference();
+        std::vector<VkSubpassDescription> subpasses = this->getSubpassDescription(&reference);
+        VkRenderPassCreateInfo renderPassCreateInfo = this->getRenderPassCreateInfo(&attachments,
+                                                                                    &subpasses);
+
+        if (vkCreateRenderPass(device,
+                               &renderPassCreateInfo,
+                               nullptr,
+                               &this->renderPass) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreateRenderpass);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
 }
 
 Result<void> Renderer::createSemaphores() {
@@ -173,6 +309,27 @@ Result<void> Renderer::createSemaphores() {
     return Result<void>::createError(result.getError());
 }
 
+Result<void> Renderer::createTextureSampler() {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkSamplerCreateInfo samplerCreateInfo = this->getSamplerCreateInfo();
+
+        if (vkCreateSampler(device,
+                            &samplerCreateInfo,
+                            nullptr,
+                            &this->textureSampler) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreateSampler);
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
 Result<void> Renderer::createTransformBuffer() {
     Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(sizeof(Transform),
                                                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -182,6 +339,67 @@ Result<void> Renderer::createTransformBuffer() {
 
     this->transformBuffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
     return Result<void>::createError(Error::None);
+}
+
+std::vector<VkAttachmentDescription> Renderer::getAttachmentDescription() const noexcept {
+    std::vector<VkAttachmentDescription> attachments (1);
+
+    // Configure Attachment
+    attachments[0].flags = 0;
+    attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    return attachments;
+}
+
+VkAttachmentReference Renderer::getAttachmentReference() const noexcept {
+    VkAttachmentReference attachmentReference = {};
+
+    attachmentReference.attachment = 0;
+    attachmentReference.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    return attachmentReference;
+}
+
+VkPipelineColorBlendAttachmentState Renderer::getColorBlendAttachmentState() const noexcept {
+    VkPipelineColorBlendAttachmentState attachmentState = {};
+
+    attachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    attachmentState.blendEnable = VK_TRUE;
+    attachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    attachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    attachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+    attachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    attachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    attachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    return attachmentState;
+}
+
+VkPipelineColorBlendStateCreateInfo Renderer::getColorBlendStateCreateInfo(
+        VkPipelineColorBlendAttachmentState *attachmentState) const noexcept {
+    VkPipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo = {};
+
+    pipelineColorBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    pipelineColorBlendStateCreateInfo.pNext = nullptr;
+    pipelineColorBlendStateCreateInfo.flags = 0;
+    pipelineColorBlendStateCreateInfo.logicOpEnable = VK_FALSE;
+    pipelineColorBlendStateCreateInfo.logicOp = VK_LOGIC_OP_COPY;
+    pipelineColorBlendStateCreateInfo.attachmentCount = 1;
+    pipelineColorBlendStateCreateInfo.pAttachments = attachmentState;
+    pipelineColorBlendStateCreateInfo.blendConstants[0] = 0.0f;
+    pipelineColorBlendStateCreateInfo.blendConstants[1] = 0.0f;
+    pipelineColorBlendStateCreateInfo.blendConstants[2] = 0.0f;
+    pipelineColorBlendStateCreateInfo.blendConstants[3] = 0.0f;
+
+    return pipelineColorBlendStateCreateInfo;
 }
 
 VkDescriptorSetAllocateInfo Renderer::getDescriptorSetAllocateInfo() const noexcept {
@@ -257,6 +475,67 @@ VkDescriptorSetLayoutCreateInfo Renderer::getDescriptorSetLayoutCreateInfo(
     return descriptorSetLayoutCreateInfo;
 }
 
+VkFramebufferCreateInfo Renderer::getFramebufferCreateInfo(
+        uint32 imageIndex) const noexcept {
+    VkFramebufferCreateInfo framebufferCreateInfo = {};
+
+    framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferCreateInfo.pNext = 0;
+    framebufferCreateInfo.flags = 0;
+    framebufferCreateInfo.renderPass = this->renderPass;
+    framebufferCreateInfo.attachmentCount = 1;
+    framebufferCreateInfo.pAttachments = &this->imageBuffers[imageIndex];
+    framebufferCreateInfo.width = this->width;
+    framebufferCreateInfo.height = this->height;
+    framebufferCreateInfo.layers = 1;
+
+    return framebufferCreateInfo;
+}
+
+VkGraphicsPipelineCreateInfo Renderer::getGraphicsPipelineCreateInfo(
+        std::vector<VkPipelineShaderStageCreateInfo> *shaderStages,
+        VkPipelineVertexInputStateCreateInfo *vertexInputState,
+        VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
+        VkPipelineViewportStateCreateInfo *viewportState,
+        VkPipelineRasterizationStateCreateInfo *rasterizationState,
+        VkPipelineColorBlendStateCreateInfo *colorBlendState) const noexcept {
+    VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
+
+    graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphicsPipelineCreateInfo.pNext = nullptr;
+    graphicsPipelineCreateInfo.flags = 0;
+    graphicsPipelineCreateInfo.stageCount = static_cast<uint32>(shaderStages->size());
+    graphicsPipelineCreateInfo.pStages = shaderStages->data();
+    graphicsPipelineCreateInfo.pVertexInputState = vertexInputState;
+    graphicsPipelineCreateInfo.pInputAssemblyState = inputAssemblyState;
+    graphicsPipelineCreateInfo.pTessellationState = nullptr;
+    graphicsPipelineCreateInfo.pViewportState = viewportState;
+    graphicsPipelineCreateInfo.pRasterizationState = rasterizationState;
+    graphicsPipelineCreateInfo.pMultisampleState = nullptr;
+    graphicsPipelineCreateInfo.pDepthStencilState = nullptr;
+    graphicsPipelineCreateInfo.pColorBlendState = colorBlendState;
+    graphicsPipelineCreateInfo.pDynamicState = nullptr;
+    graphicsPipelineCreateInfo.layout = this->pipelineLayout;
+    graphicsPipelineCreateInfo.renderPass = this->renderPass;
+    graphicsPipelineCreateInfo.subpass = 0;
+    graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    graphicsPipelineCreateInfo.basePipelineIndex = 0;
+
+    return graphicsPipelineCreateInfo;
+}
+
+VkPipelineInputAssemblyStateCreateInfo Renderer::getInputAssemblyStateCreateInfo() const noexcept {
+    VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {};
+
+    pipelineInputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    pipelineInputAssemblyStateCreateInfo.pNext = nullptr;
+    pipelineInputAssemblyStateCreateInfo.flags = 0;
+    pipelineInputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+    return pipelineInputAssemblyStateCreateInfo;
+}
+
 VkPipelineLayoutCreateInfo Renderer::getPipelineLayoutCreateInfo() const noexcept {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 
@@ -286,6 +565,80 @@ VkPresentInfoKHR Renderer::getPresentInfoKHR() const noexcept {
     return presentInfoKHR;
 }
 
+VkPipelineRasterizationStateCreateInfo Renderer::getRasterizationStateCreateInfo() const noexcept {
+    VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {};
+
+    rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateCreateInfo.pNext = nullptr;
+    rasterizationStateCreateInfo.flags = 0;
+    rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
+    rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_TRUE;
+    rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;
+    rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;
+    rasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
+    rasterizationStateCreateInfo.depthBiasClamp = 0.0f;
+    rasterizationStateCreateInfo.depthBiasSlopeFactor = 0.0f;
+    rasterizationStateCreateInfo.lineWidth = 0.0f;
+
+    return rasterizationStateCreateInfo;
+}
+
+VkRect2D Renderer::getRect2D() const noexcept {
+    VkRect2D rect = {};
+
+    rect.offset.x = 0;
+    rect.offset.y = 0;
+    rect.extent.width = this->width;
+    rect.extent.height = this->height;
+
+    return rect;
+}
+
+VkRenderPassCreateInfo Renderer::getRenderPassCreateInfo(
+        std::vector<VkAttachmentDescription> *attachments,
+        std::vector<VkSubpassDescription> *subpasses) const noexcept {
+    VkRenderPassCreateInfo renderPassCreateInfo = {};
+
+    renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.pNext = nullptr;
+    renderPassCreateInfo.flags = 0;
+    renderPassCreateInfo.attachmentCount = static_cast<uint32>(attachments->size());
+    renderPassCreateInfo.pAttachments = attachments->data();
+    renderPassCreateInfo.subpassCount = static_cast<uint32>(subpasses->size());
+    renderPassCreateInfo.pSubpasses = subpasses->data();
+    renderPassCreateInfo.dependencyCount = 0;
+    renderPassCreateInfo.pDependencies = nullptr;
+
+    return renderPassCreateInfo;
+}
+
+VkSamplerCreateInfo Renderer::getSamplerCreateInfo() const noexcept {
+    VkSamplerCreateInfo samplerCreateInfo = {};
+
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.pNext = nullptr;
+    samplerCreateInfo.flags = 0;
+    samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+    samplerCreateInfo.mipLodBias = 0.0f;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE;
+    samplerCreateInfo.maxAnisotropy = 0.0f;
+    samplerCreateInfo.compareEnable = VK_FALSE;
+    samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerCreateInfo.minLod = 0.0f;
+    samplerCreateInfo.maxLod = 1.0f;
+    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+
+    return samplerCreateInfo;
+}
+
 VkSemaphoreCreateInfo Renderer::getSemaphoreCreateInfo() const noexcept {
     VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 
@@ -294,6 +647,49 @@ VkSemaphoreCreateInfo Renderer::getSemaphoreCreateInfo() const noexcept {
     semaphoreCreateInfo.flags = 0;
 
     return semaphoreCreateInfo;
+}
+
+std::vector<VkPipelineShaderStageCreateInfo> Renderer::getShaderStageCreateInfo() const noexcept {
+    std::vector<VkPipelineShaderStageCreateInfo> pipelineShaderStageCreateInfo (2);
+
+    // Configure Vertex Shader
+    pipelineShaderStageCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipelineShaderStageCreateInfo[0].pNext = nullptr;
+    pipelineShaderStageCreateInfo[0].flags = 0;
+    pipelineShaderStageCreateInfo[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    pipelineShaderStageCreateInfo[0].module = this->material->getVertexModule();
+    pipelineShaderStageCreateInfo[0].pName = "main";
+    pipelineShaderStageCreateInfo[0].pSpecializationInfo = nullptr;
+
+    // Configure Fragment Shader
+    pipelineShaderStageCreateInfo[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipelineShaderStageCreateInfo[1].pNext = nullptr;
+    pipelineShaderStageCreateInfo[1].flags = 0;
+    pipelineShaderStageCreateInfo[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    pipelineShaderStageCreateInfo[1].module = this->material->getFragmentModule();
+    pipelineShaderStageCreateInfo[1].pName = "main";
+    pipelineShaderStageCreateInfo[1].pSpecializationInfo = nullptr;
+
+    return pipelineShaderStageCreateInfo;
+}
+
+std::vector<VkSubpassDescription> Renderer::getSubpassDescription(
+        VkAttachmentReference *attachmentReference) const noexcept {
+    std::vector<VkSubpassDescription> subpasses (1);
+
+    // Configure Subpass
+    subpasses[0].flags = 0;
+    subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpasses[0].inputAttachmentCount = 0;
+    subpasses[0].pInputAttachments = nullptr;
+    subpasses[0].colorAttachmentCount = 1;
+    subpasses[0].pColorAttachments = attachmentReference;
+    subpasses[0].pResolveAttachments = nullptr;
+    subpasses[0].pDepthStencilAttachment = nullptr;
+    subpasses[0].preserveAttachmentCount = 0;
+    subpasses[0].pPreserveAttachments = nullptr;
+
+    return subpasses;
 }
 
 Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
@@ -310,6 +706,48 @@ Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
     }
 
     return Result<VkDevice>::createError(result.getError());
+}
+
+VkPipelineVertexInputStateCreateInfo Renderer::getVertexInputStateCreateInfo() const noexcept {
+    VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {};
+
+    pipelineVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    pipelineVertexInputStateCreateInfo.pNext = nullptr;
+    pipelineVertexInputStateCreateInfo.flags = 0;
+    pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+    pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
+    pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+    pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
+
+    return pipelineVertexInputStateCreateInfo;
+}
+
+VkViewport Renderer::getViewport() const noexcept {
+    VkViewport viewport = {};
+
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(this->width);
+    viewport.height = static_cast<float>(this->height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    return viewport;
+}
+
+VkPipelineViewportStateCreateInfo Renderer::getViewportStateCreateInfo(VkViewport *viewport,
+                                                                       VkRect2D *rect) const noexcept {
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
+
+    viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateCreateInfo.pNext = nullptr;
+    viewportStateCreateInfo.flags = 0;
+    viewportStateCreateInfo.viewportCount = 1;
+    viewportStateCreateInfo.pViewports = viewport;
+    viewportStateCreateInfo.scissorCount = 1;
+    viewportStateCreateInfo.pScissors = rect;
+
+    return viewportStateCreateInfo;
 }
 
 Result<void> Renderer::loadQueues() {
@@ -357,7 +795,7 @@ void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComp
     descriptorBufferInfo.range = VK_WHOLE_SIZE;
 
     // Configure Image Info
-    descriptorImageInfo.sampler = VK_NULL_HANDLE;
+    descriptorImageInfo.sampler = this->textureSampler;
     descriptorImageInfo.imageView = spriteComponent->getTexture()->getImageView();
     descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -386,7 +824,7 @@ void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComp
     writeDescriptorSet[1].pTexelBufferView = nullptr;
 
     vkUpdateDescriptorSets(this->device,
-                           1,
+                           2,
                            writeDescriptorSet,
                            0,
                            nullptr);
@@ -394,10 +832,19 @@ void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComp
 
 Renderer::Renderer() {
     this->descriptorLayout = VK_NULL_HANDLE;
+    this->descriptorPool = VK_NULL_HANDLE;
+    this->device = VK_NULL_HANDLE;
+    this->imageSemaphore = VK_NULL_HANDLE;
     this->pipelineLayout = VK_NULL_HANDLE;
     this->pipeline = VK_NULL_HANDLE;
+    this->renderPass = VK_NULL_HANDLE;
+    this->swapchain = VK_NULL_HANDLE;
+    this->framebuffers = std::vector<VkFramebuffer>();
     this->deviceQueues = std::vector<std::shared_ptr<Queue>>();
     this->transferQueue = nullptr;
+    this->imageIndex = 0;
+    this->width = 0;
+    this->height = 0;
 }
 
 Renderer::~Renderer() {
@@ -415,11 +862,7 @@ Result<void> Renderer::begin() {
         this->device = static_cast<VkDevice>(result);
 
         // Bind Pipelines
-        for (auto &queue : this->deviceQueues) {
-            if (queue != this->transferQueue) {
-                queue->bindPipeline(this->pipeline);
-            }
-        }
+        this->deviceQueues[0]->bindPipeline(this->pipeline);
 
         // Acquire Next Image
         if (vkAcquireNextImageKHR(this->device,
@@ -442,12 +885,21 @@ void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
     VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
 
     this->updateDescriptorSets(spriteComponent);
+    vkCmdBindDescriptorSets(cmdBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            this->pipelineLayout,
+                            0,
+                            1,
+                            &this->descriptorSets[0],
+                            0,
+                            nullptr);
+
 
 }
 
 Result<void> Renderer::end() {
     auto queue = static_cast<VkQueue>(this->deviceQueues[0]->getVulkanQueue());
-    VkPipelineStageFlags stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkPresentInfoKHR presentInfoKHR = this->getPresentInfoKHR();
 
     // Submit Buffers
@@ -562,6 +1014,16 @@ Result<void> Renderer::startup() {
         return Result<void>::createError(loadResult.getError());
     }
 
+    Result<void> materialResult = this->createMaterial();
+    if (materialResult.hasError()) {
+        return Result<void>::createError(materialResult.getError());
+    }
+
+    Result<void> swapchainAndBuffersResult = this->acquireSwapchainAndBuffers();
+    if (swapchainAndBuffersResult.hasError()) {
+        return Result<void>::createError(swapchainAndBuffersResult.getError());
+    }
+
     Result<void> descriptorLayoutResult = this->createDescriptorLayouts();
     if (descriptorLayoutResult.hasError()) {
         return Result<void>::createError(descriptorLayoutResult.getError());
@@ -582,14 +1044,24 @@ Result<void> Renderer::startup() {
         return Result<void>::createError(pipelineLayoutResult.getError());
     }
 
-    Result<void> pipelineResult = this->createPipelines();
+    Result<void> renderPassResult = this->createRenderPass();
+    if (renderPassResult.hasError()) {
+        return Result<void>::createError(renderPassResult.getError());
+    }
+
+    Result<void> framebufferResult = this->createFramebuffers();
+    if (framebufferResult.hasError()) {
+        return Result<void>::createError(framebufferResult.getError());
+    }
+
+    Result<void> pipelineResult = this->createPipeline();
     if (pipelineResult.hasError()) {
         return Result<void>::createError(pipelineResult.getError());
     }
 
-    Result<void> swapchainAndBuffersResult = this->acquireSwapchainAndBuffers();
-    if (swapchainAndBuffersResult.hasError()) {
-        return Result<void>::createError(swapchainAndBuffersResult.getError());
+    Result<void> samplerResult = this->createTextureSampler();
+    if (samplerResult.hasError()) {
+        return Result<void>::createError(samplerResult.getError());
     }
 
     Result<void> transformResult = this->createTransformBuffer();
@@ -626,6 +1098,30 @@ void Renderer::shutdown() {
             this->imageSemaphore = VK_NULL_HANDLE;
         }
 
+        if (this->textureSampler != VK_NULL_HANDLE) {
+            vkDestroySampler(device, this->textureSampler, nullptr);
+            this->textureSampler = VK_NULL_HANDLE;
+        }
+
+        for (auto &frame : this->framebuffers) {
+            if (frame != VK_NULL_HANDLE) {
+                vkDestroyFramebuffer(device, frame, nullptr);
+                frame = VK_NULL_HANDLE;
+            }
+        }
+
+        if (this->renderPass != VK_NULL_HANDLE) {
+            vkDestroyRenderPass(device, this->renderPass, nullptr);
+            this->renderPass = VK_NULL_HANDLE;
+        }
+
+        for (auto &view : this->imageBuffers) {
+            if (view != VK_NULL_HANDLE) {
+                vkDestroyImageView(device, view, nullptr);
+                view = VK_NULL_HANDLE;
+            }
+        }
+
         if (this->pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(device, this->pipeline, nullptr);
             this->pipeline = VK_NULL_HANDLE;
@@ -652,7 +1148,13 @@ void Renderer::shutdown() {
         }
     }
 
+    this->material.reset();
     this->transformBuffer.reset();
+
     this->deviceQueues.clear();
+    this->imageBuffers.clear();
+
+    this->device = VK_NULL_HANDLE;
+    this->swapchain = VK_NULL_HANDLE;
     this->transferQueue = nullptr;
 }
