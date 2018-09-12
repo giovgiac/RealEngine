@@ -124,9 +124,13 @@ protected:
      */
     struct VkImageCreateInfo getImageCreateInfo() const noexcept;
 
+    struct VkImageViewCreateInfo getImageViewCreateInfo(struct VkComponentMapping components,
+                                                        struct VkImageSubresourceRange subresources,
+                                                        uint32 viewType) const noexcept;
+
     struct VkImageMemoryBarrier getImageMemoryBarrier(uint32 newLayout) const noexcept;
 
-    Result<std::shared_ptr<const class Renderer>> getRenderer() const noexcept;
+    Result<std::shared_ptr<class Renderer>> getRenderer() const noexcept;
 
 public:
     /**
@@ -175,6 +179,10 @@ public:
                                                             uint32 fmt,
                                                             uint32 tlng,
                                                             std::vector<std::weak_ptr<class Queue>> &queues);
+
+    Result<struct VkImageView_T *> getImageView(struct VkComponentMapping components,
+                                                struct VkImageSubresourceRange subresources,
+                                                uint32 viewType) const noexcept;
 
     /**
      * Este método tem como objetivo permitir a obtenção da handle ao objeto do tipo VkImage para que outros

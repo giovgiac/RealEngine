@@ -20,11 +20,10 @@ MemoryManager::MemoryManager() {
 }
 
 MemoryManager::~MemoryManager() {
-    this->allocatorList.clear();
-
-    if (this->memoryProperties != nullptr)
-        std::cout << "WARNING: MemoryManager deleted without being shutdown..." << std::endl,
+    if (this->memoryProperties != nullptr) {
+        std::cout << "WARNING: MemoryManager deleted without being shutdown..." << std::endl;
         this->shutdown();
+    }
 }
 
 Result<VkPhysicalDevice> MemoryManager::getPhysicalDevice() const noexcept {
@@ -68,7 +67,8 @@ Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint6
                                                                            uint32 flags) noexcept {
     for (auto &alloc : allocatorList) {
         if (alloc->getAllocatorAlignment() == alignment &&
-            alloc->getAllocatorChunkSize() == chunkSize) {
+            alloc->getAllocatorChunkSize() == chunkSize &&
+            alloc->getAllocatorFlags() == flags) {
 
             return Result<std::shared_ptr<PoolAllocator>>(alloc);
         }
@@ -94,14 +94,16 @@ Result<void> MemoryManager::startup() {
     std::cout << "Starting Up MemoryManager..." << std::endl;
 
     Result<void> result = this->getPhysicalDeviceMemoryProperties();
-    if (result.hasError())
+    if (result.hasError()) {
         return Result<void>::createError(result.getError());
+    }
 
     return Result<void>::createError(Error::None);
 }
 
 void MemoryManager::shutdown() {
     // Clear objects
+    this->allocatorList.clear();
     this->memoryProperties.reset();
 
     std::cout << "Shutting Down MemoryManager..." << std::endl;

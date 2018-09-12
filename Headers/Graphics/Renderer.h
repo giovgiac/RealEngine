@@ -18,23 +18,42 @@ private:
 
     std::shared_ptr<class Queue> transferQueue;
 
+    struct VkDescriptorPool_T *descriptorPool;
+
     struct VkDescriptorSetLayout_T *descriptorLayout;
+
+    std::vector<struct VkDescriptorSet_T *> descriptorSets;
 
     struct VkPipelineLayout_T *pipelineLayout;
 
     struct VkPipeline_T *pipeline;
 
+    struct VkDevice_T *device;
+
+    std::shared_ptr<class Buffer> transformBuffer;
+
 private:
+    Result<void> allocateDescriptorSets();
+
     Result<void> createDescriptorLayouts();
+
+    Result<void> createDescriptorPool();
 
     Result<void> createPipelineLayouts();
 
     Result<void> createPipelines();
 
+    struct VkDescriptorSetAllocateInfo getDescriptorSetAllocateInfo() const noexcept;
+
     std::vector<struct VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings() const noexcept;
 
-    struct VkDescriptorSetLayoutCreateInfo
-    getDescriptorSetLayoutCreateInfo(std::vector<struct VkDescriptorSetLayoutBinding> *bindings) const noexcept;
+    struct VkDescriptorPoolCreateInfo getDescriptorPoolCreateInfo(
+            std::vector<struct VkDescriptorPoolSize> *poolSize) const noexcept;
+
+    std::vector<struct VkDescriptorPoolSize> getDescriptorPoolSize() const noexcept;
+
+    struct VkDescriptorSetLayoutCreateInfo getDescriptorSetLayoutCreateInfo(
+            std::vector<struct VkDescriptorSetLayoutBinding> *bindings) const noexcept;
 
     struct VkPipelineLayoutCreateInfo getPipelineLayoutCreateInfo() const noexcept;
 
@@ -46,6 +65,12 @@ public:
     explicit Renderer();
 
     virtual ~Renderer();
+
+    Result<void> begin();
+
+    void draw(std::shared_ptr<class SpriteComponent> spriteComponent);
+
+    Result<void> end();
 
     Result<void> executeTransferBuffer(struct VkCommandBuffer_T *cmdBuffer) const noexcept;
 

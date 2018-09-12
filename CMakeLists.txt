@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 # Project Include Directories
 include_directories("Headers/")
+include_directories("Headers/Components")
 include_directories("Headers/Core")
 include_directories("Headers/Device")
 include_directories("Headers/Graphics")
@@ -85,7 +86,8 @@ set(HEADERS Headers/Core/Result.h
         Headers/Device/Command.h
         Headers/Graphics/Texture.h
         Headers/Graphics/Window.h
-        Headers/Graphics/Material.h)
+        Headers/Graphics/Material.h
+        Headers/Components/SpriteComponent.h)
 
 # Source Files
 set(SOURCES Sources/Device/Instance.cpp
@@ -98,11 +100,12 @@ set(SOURCES Sources/Device/Instance.cpp
         Sources/Device/Image.cpp
         Sources/Device/Queue.cpp
         Sources/Graphics/Renderer.cpp
-        Tests/TestManagers.cpp
-        Tests/TestManagerFixture.h
-        Tests/TestResources.cpp
         Sources/Graphics/Texture.cpp
         Sources/Graphics/Window.cpp
-        Sources/Graphics/Material.cpp)
+        Sources/Graphics/Material.cpp
+        Sources/Components/SpriteComponent.cpp
+        Tests/TestManagers.cpp
+        Tests/TestManagerFixture.h
+        Tests/TestResources.cpp)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

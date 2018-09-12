@@ -52,6 +52,8 @@ protected:
 public:
     virtual ~Queue();
 
+    void bindPipeline(struct VkPipeline_T *pipeline);
+
     static Result<std::shared_ptr<Queue>> createQueue(struct VkDevice_T *device,
                                                       uint32 familyIndex,
                                                       uint32 queueIndex);
@@ -61,6 +63,8 @@ public:
     Result<struct VkCommandPool_T *> getVulkanPool() const noexcept;
 
     Result<struct VkQueue_T *> getVulkanQueue() const noexcept;
+
+    void resetBuffers();
 
     Result<void> submit() const noexcept;
 

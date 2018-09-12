@@ -128,6 +128,8 @@ public:
 
     inline uint64 getAllocatorChunkSize() const noexcept { return this->chunkSize; }
 
+    inline uint32 getAllocatorFlags() const noexcept { return this->flags; }
+
     /**
      * O método que os alocadores necessitam para que outros objetos possam efetuar requisições de alocações
      * de espaços de memória de vídeo.

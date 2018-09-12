@@ -127,6 +127,23 @@ VkImageCreateInfo Image::getImageCreateInfo() const noexcept {
     return imageCreateInfo;
 }
 
+VkImageViewCreateInfo Image::getImageViewCreateInfo(VkComponentMapping components,
+                                                    VkImageSubresourceRange subresources,
+                                                    uint32 viewType) const noexcept {
+    VkImageViewCreateInfo imageViewCreateInfo = {};
+
+    imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imageViewCreateInfo.pNext = nullptr;
+    imageViewCreateInfo.flags = 0;
+    imageViewCreateInfo.image = this->image;
+    imageViewCreateInfo.format = static_cast<VkFormat>(this->format);
+    imageViewCreateInfo.components = components;
+    imageViewCreateInfo.subresourceRange = subresources;
+    imageViewCreateInfo.viewType = static_cast<VkImageViewType>(viewType);
+
+    return imageViewCreateInfo;
+}
+
 VkImageMemoryBarrier Image::getImageMemoryBarrier(uint32 newLayout) const noexcept {
     VkImageMemoryBarrier imageMemoryBarrier = {};
 
@@ -148,22 +165,22 @@ VkImageMemoryBarrier Image::getImageMemoryBarrier(uint32 newLayout) const noexce
     return imageMemoryBarrier;
 }
 
-Result<std::shared_ptr<const Renderer>> Image::getRenderer() const noexcept {
+Result<std::shared_ptr<Renderer>> Image::getRenderer() const noexcept {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    Result<std::weak_ptr<const Renderer>> result = graphicsManager.getRenderer();
+    Result<std::weak_ptr<Renderer>> result = graphicsManager.getRenderer();
 
     if (!result.hasError()) {
-        auto rend = static_cast<std::weak_ptr<const Renderer>>(result);
+        auto rend = static_cast<std::weak_ptr<Renderer>>(result);
 
-        if (std::shared_ptr<const Renderer> renderer = rend.lock()) {
-            return Result<std::shared_ptr<const Renderer>>(renderer);
+        if (std::shared_ptr<Renderer> renderer = rend.lock()) {
+            return Result<std::shared_ptr<Renderer>>(renderer);
         }
         else {
-            return Result<std::shared_ptr<const Renderer>>::createError(Error::FailedToLockPointer);
+            return Result<std::shared_ptr<Renderer>>::createError(Error::FailedToLockPointer);
         }
     }
 
-    return Result<std::shared_ptr<const Renderer>>::createError(result.getError());
+    return Result<std::shared_ptr<Renderer>>::createError(result.getError());
 }
 
 Image::~Image() {
@@ -273,6 +290,32 @@ Result<std::shared_ptr<Image>> Image::createSharedImage(VkExtent3D ext,
     return Result<std::shared_ptr<Image>>::createError(result.getError());
 }
 
+Result<VkImageView> Image::getImageView(VkComponentMapping components,
+                                        VkImageSubresourceRange subresources,
+                                        uint32 viewType) const noexcept {
+    Result<VkDevice> result = this->getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<VkDevice>(result);
+        VkImageViewCreateInfo imageViewCreateInfo = this->getImageViewCreateInfo(components,
+                                                                                 subresources,
+                                                                                 viewType);
+        VkImageView imageView = VK_NULL_HANDLE;
+
+        if (vkCreateImageView(device,
+                              &imageViewCreateInfo,
+                              nullptr,
+                              &imageView) == VK_SUCCESS) {
+            return Result<VkImageView>(imageView);
+        }
+        else {
+            return Result<VkImageView>::createError(Error::FailedToCreateImageView);
+        }
+    }
+
+    return Result<VkImageView>::createError(result.getError());
+}
+
 Result<VkImage> Image::getVulkanImage() const noexcept {
     if (this->image != VK_NULL_HANDLE)
         return Result<VkImage>(this->image);
@@ -284,10 +327,10 @@ void Image::transitionLayout(VkCommandBuffer cmdBuffer,
                              uint32 newLayout,
                              VkPipelineStageFlags sourceStage,
                              VkPipelineStageFlags destinationStage) {
-    Result<std::shared_ptr<const Renderer>> result = this->getRenderer();
+    Result<std::shared_ptr<Renderer>> result = this->getRenderer();
 
     if (!result.hasError()) {
-        auto renderer = static_cast<std::shared_ptr<const Renderer>>(result);
+        auto renderer = static_cast<std::shared_ptr<Renderer>>(result);
         VkImageMemoryBarrier imageMemoryBarrier = this->getImageMemoryBarrier(newLayout);
 
         vkCmdPipelineBarrier(cmdBuffer,

@@ -36,7 +36,7 @@ VkCommandBufferBeginInfo Queue::getCommandBufferBeginInfo() const noexcept {
     
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     commandBufferBeginInfo.pNext = nullptr;
-    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
     
     return commandBufferBeginInfo;
@@ -102,6 +102,10 @@ Queue::~Queue() {
     }
 }
 
+void Queue::bindPipeline(VkPipeline pipeline) {
+    //vkCmdBindPipeline(this->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+}
+
 Result<std::shared_ptr<Queue>> Queue::createQueue(VkDevice device,
                                                   uint32 familyIndex,
                                                   uint32 queueIndex) {
@@ -158,6 +162,10 @@ Result<VkQueue> Queue::getVulkanQueue() const noexcept {
         return Result<VkQueue>(this->queue);
     else
         return Result<VkQueue>::createError(Error::FailedToRetrieveQueue);
+}
+
+void Queue::resetBuffers() {
+    vkResetCommandBuffer(this->buffer, 0);
 }
 
 Result<void> Queue::submit() const noexcept {

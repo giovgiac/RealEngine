@@ -15,6 +15,7 @@
 #include "MemoryManager.h"
 #include "PoolAllocator.h"
 #include "Renderer.h"
+#include "SpriteComponent.h"
 #include "Texture.h"
 #include "Window.h"
 
@@ -192,18 +193,54 @@ int main() {
     window->startup();
 
     // Test Materials
-    Result<std::shared_ptr<Material>> materialResult = Material::createMaterial("Shaders/vert.spv",
-                                                                                "Shaders/frag.spv");
+    {
+        Result<std::shared_ptr<Material>> materialResult = Material::createMaterial("Shaders/vert.spv",
+                                                                                    "Shaders/frag.spv");
 
-    if (!materialResult.hasError()) {
-        std::cout << "Material Successfully Created..." << std::endl;
-    }
-    else {
-        std::cout << "Material Error: " << static_cast<uint32>(materialResult.getError()) << std::endl;
+        if (!materialResult.hasError()) {
+            std::cout << "Material Successfully Created..." << std::endl;
+        } else {
+            std::cout << "Material Error: " << static_cast<uint32>(materialResult.getError()) << std::endl;
+        }
     }
 
-    while (!window->shouldClose()) {
-        window->pollEvents();
+    // Test Rendering
+    {
+        // Acquire Renderer
+        std::shared_ptr<Renderer> renderer = nullptr;
+        Result<std::weak_ptr<Renderer>> rendererResult = graphicsManager.getRenderer();
+
+        if (!rendererResult.hasError()) {
+            auto weak_renderer = static_cast<std::weak_ptr<Renderer>>(rendererResult);
+            renderer = weak_renderer.lock();
+        }
+
+        // Create Sprite
+        std::shared_ptr<SpriteComponent> spriteComponent = nullptr;
+        Result<std::shared_ptr<SpriteComponent>> spriteResult
+                = SpriteComponent::createSpriteComponent(glm::vec2(0.0f, 0.0f),
+                                                         glm::angleAxis(glm::radians(0.0f),
+                                                                        glm::vec3(0.0f,
+                                                                                  1.0f,
+                                                                                  0.0f)),
+                                                         glm::vec2(1.0f, 1.0f),
+                                                         "goku.png",
+                                                         "Shaders/vert.spv",
+                                                         "Shaders/frag.spv");
+
+        if (!spriteResult.hasError()) {
+            spriteComponent = static_cast<std::shared_ptr<SpriteComponent>>(spriteResult);
+            spriteComponent->load();
+        }
+
+        while (!window->shouldClose()) {
+            // Render Loop
+            renderer->begin();
+            renderer->draw(spriteComponent);
+            renderer->end();
+
+            window->pollEvents();
+        }
     }
 
     window->shutdown();

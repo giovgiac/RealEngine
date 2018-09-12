@@ -39,11 +39,11 @@ Result<std::weak_ptr<const Instance>> GraphicsManager::getGraphicsInstance() con
         return Result<std::weak_ptr<const Instance>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
-Result<std::weak_ptr<const Renderer>> GraphicsManager::getRenderer() const noexcept {
+Result<std::weak_ptr<Renderer>> GraphicsManager::getRenderer() const noexcept {
     if (this->renderer)
-        return Result<std::weak_ptr<const Renderer>>(this->renderer);
+        return Result<std::weak_ptr<Renderer>>(this->renderer);
     else
-        return Result<std::weak_ptr<const Renderer>>::createError(Error::GraphicsManagerNotStartedUp);
+        return Result<std::weak_ptr<Renderer>>::createError(Error::GraphicsManagerNotStartedUp);
 }
 
 Result<void> GraphicsManager::startup() {
@@ -82,14 +82,14 @@ Result<void> GraphicsManager::startup() {
 }
 
 void GraphicsManager::shutdown() {
+    this->renderer->shutdown();
     this->device->shutdown();
     this->instance->shutdown();
-    this->renderer->shutdown();
 
     // Clear objects
+    this->renderer.reset();
     this->device.reset();
     this->instance.reset();
-    this->renderer.reset();
 
     std::cout << "Shutting Down GraphicsManager..." << std::endl;
 }

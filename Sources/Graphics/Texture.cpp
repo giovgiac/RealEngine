@@ -6,6 +6,7 @@
  */
 
 #include "Buffer.h"
+#include "Device.h"
 #include "GraphicsManager.h"
 #include "Image.h"
 #include "Renderer.h"
@@ -15,8 +16,40 @@
 #include <vulkan/vulkan.h>
 
 Texture::Texture() {
+    this->width = 0;
+    this->height = 0;
     this->buffer = nullptr;
     this->image = nullptr;
+    this->view = VK_NULL_HANDLE;
+}
+
+Result<void> Texture::createImageView() {
+    VkComponentMapping components = {};
+    VkImageSubresourceRange subresources = {};
+    VkImageViewType type = VK_IMAGE_VIEW_TYPE_2D;
+
+    // Configure Components
+    components.r = VK_COMPONENT_SWIZZLE_R;
+    components.b = VK_COMPONENT_SWIZZLE_B;
+    components.g = VK_COMPONENT_SWIZZLE_G;
+    components.a = VK_COMPONENT_SWIZZLE_A;
+
+    // Configure Subresource
+    subresources.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subresources.baseArrayLayer = 0;
+    subresources.layerCount = 1;
+    subresources.baseMipLevel = 0;
+    subresources.levelCount = 1;
+
+    Result<VkImageView> result = this->image->getImageView(components,
+                                                           subresources,
+                                                           type);
+    if (!result.hasError()) {
+        this->view = static_cast<VkImageView>(result);
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
 }
 
 VkBufferImageCopy Texture::getBufferImageCopy() const noexcept {
@@ -35,22 +68,38 @@ VkBufferImageCopy Texture::getBufferImageCopy() const noexcept {
     return bufferImageCopy;
 }
 
-Result<std::shared_ptr<const Renderer>> Texture::getRenderer() const noexcept {
+Result<VkDevice> Texture::getGraphicsDevice() const noexcept {
     GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    Result<std::weak_ptr<const Renderer>> result = graphicsManager.getRenderer();
+    Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
 
     if (!result.hasError()) {
-        auto rend = static_cast<std::weak_ptr<const Renderer>>(result);
+        auto device = static_cast<std::weak_ptr<const Device>>(result);
 
-        if (std::shared_ptr<const Renderer> renderer = rend.lock()) {
-            return Result<std::shared_ptr<const Renderer>>(renderer);
+        if (std::shared_ptr<const Device> dev = device.lock())
+            return dev->getVulkanDevice();
+        else
+            return Result<VkDevice>::createError(Error::GraphicsManagerNotStartedUp);
+    }
+
+    return Result<VkDevice>::createError(result.getError());
+}
+
+Result<std::shared_ptr<Renderer>> Texture::getRenderer() const noexcept {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    Result<std::weak_ptr<Renderer>> result = graphicsManager.getRenderer();
+
+    if (!result.hasError()) {
+        auto rend = static_cast<std::weak_ptr<Renderer>>(result);
+
+        if (std::shared_ptr<Renderer> renderer = rend.lock()) {
+            return Result<std::shared_ptr<Renderer>>(renderer);
         }
         else {
-            return Result<std::shared_ptr<const Renderer>>::createError(Error::FailedToLockPointer);
+            return Result<std::shared_ptr<Renderer>>::createError(Error::FailedToLockPointer);
         }
     }
 
-    return Result<std::shared_ptr<const Renderer>>::createError(result.getError());
+    return Result<std::shared_ptr<Renderer>>::createError(result.getError());
 }
 
 Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {
@@ -78,6 +127,22 @@ Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {
     }
 
     return Result<RawImageInfo>::createError(Error::UnknownImageFormat);
+}
+
+Texture::~Texture() {
+    this->buffer.reset();
+    this->image.reset();
+    this->width = 0;
+    this->height = 0;
+
+    if (this->view != VK_NULL_HANDLE) {
+        Result<VkDevice> result = this->getGraphicsDevice();
+
+        if (!result.hasError()) {
+            auto device = static_cast<VkDevice>(result);
+            vkDestroyImageView(device, this->view, nullptr);
+        }
+    }
 }
 
 Result<std::shared_ptr<Texture>> Texture::createTextureFromFile(const utf8 *filename) {
@@ -132,12 +197,16 @@ Result<std::weak_ptr<class Buffer>> Texture::getBuffer() const noexcept {
         return Result<std::weak_ptr<class Buffer>>::createError(Error::FailedToRetrieveBuffer);
 }
 
+VkImageView Texture::getImageView() const noexcept {
+    return this->view;
+}
+
 
 Result<void> Texture::load() {
-    Result<std::shared_ptr<const Renderer>> result = this->getRenderer();
+    Result<std::shared_ptr<Renderer>> result = this->getRenderer();
 
     if (!result.hasError()) {
-        auto renderer = static_cast<std::shared_ptr<const Renderer>>(result);
+        auto renderer = static_cast<std::shared_ptr<Renderer>>(result);
         Result<VkCommandBuffer> rslt = renderer->requestTransferBuffer();
 
         if (!rslt.hasError()) {
@@ -164,7 +233,14 @@ Result<void> Texture::load() {
 
             Result<void> executeResult = renderer->executeTransferBuffer(transferBuffer);
             if (!executeResult.hasError()) {
-                return Result<void>::createError(Error::None);
+                Result<void> viewResult = this->createImageView();
+
+                if (!viewResult.hasError()) {
+                    return Result<void>::createError(Error::None);
+                }
+                else {
+                    return Result<void>::createError(viewResult.getError());
+                }
             }
             else {
                 return Result<void>::createError(executeResult.getError());

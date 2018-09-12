@@ -16,6 +16,10 @@
 #include <thread>
 #include <vector>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+
 /* Integer Types */
 typedef uint8_t     uint8;
 typedef uint16_t    uint16;

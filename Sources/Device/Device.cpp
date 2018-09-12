@@ -281,6 +281,8 @@ Result<void> Device::startup() {
 }
 
 void Device::shutdown() {
+    this->queues.clear();
+
     vkDestroyDevice(this->device, nullptr);
 
     this->device = VK_NULL_HANDLE;
