@@ -135,7 +135,7 @@ public:
                                                               uint32 usg,
                                                               std::vector<std::weak_ptr<class Queue>> &queues);
 
-    Result<void> fillBuffer(uint64 offset, uint64 size, void *data);
+    Result<void> fillBuffer(uint64 size, void *data);
 
     /**
      * Este método tem como objetivo permitir a obtenção da handle ao objeto do tipo VkBuffer para que outros

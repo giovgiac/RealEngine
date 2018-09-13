@@ -179,11 +179,12 @@ Result<void> Queue::submit(VkSemaphore const *signals,
                            uint32 signalCount,
                            VkSemaphore const *waits,
                            uint32 waitCount,
-                           uint32 *stages) const noexcept {
+                           uint32 *stages,
+                           VkFence fence) const noexcept {
     VkSubmitInfo submitInfo = this->getSubmitInfo(signals, signalCount, waits, waitCount, stages);
     
     vkEndCommandBuffer(this->buffer);
-    VkResult result = vkQueueSubmit(this->queue, 1, &submitInfo, VK_NULL_HANDLE);
+    VkResult result = vkQueueSubmit(this->queue, 1, &submitInfo, fence);
     if (result == VK_SUCCESS) {
         return Result<void>::createError(Error::None);
     }

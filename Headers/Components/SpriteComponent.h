@@ -20,6 +20,10 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 color;
     glm::vec2 texCoords;
+
+    static struct VkVertexInputBindingDescription getBindingDescription() noexcept;
+
+    static std::vector<struct VkVertexInputAttributeDescription> getAttributeDescription() noexcept;
 };
 
 class SpriteComponent {
@@ -31,8 +35,6 @@ private:
     glm::vec2 scale;
 
     std::shared_ptr<class Buffer> vertexBuffer;
-
-    std::shared_ptr<class Material> material;
 
     std::shared_ptr<class Texture> texture;
 
@@ -46,22 +48,20 @@ private:
 public:
     virtual ~SpriteComponent();
 
-    std::shared_ptr<class Material> getMaterial() const noexcept;
-
     glm::mat4 getModelTransform() const noexcept;
 
     std::shared_ptr<class Texture> getTexture() const noexcept;
 
     std::shared_ptr<class Buffer> getVertexBuffer() const noexcept;
 
+    void move(float dx, float dy);
+
     Result<void> load();
 
     static Result<std::shared_ptr<SpriteComponent>> createSpriteComponent(glm::vec2 pos,
                                                                           glm::quat rot,
                                                                           glm::vec2 sc,
-                                                                          const utf8 *textureFilename,
-                                                                          const utf8 *vertexFilename,
-                                                                          const utf8 *fragmentFilename);
+                                                                          const utf8 *textureFilename);
 
 public:
     SpriteComponent(const SpriteComponent &) = delete;

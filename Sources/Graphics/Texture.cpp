@@ -100,7 +100,8 @@ Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {
 
         if (img && tmp) {
             FreeImage_Unload(img);
-            img = FreeImage_Rescale(tmp, TILE_SIZE, TILE_SIZE);
+            //img = FreeImage_Rescale(tmp, TILE_SIZE, TILE_SIZE);
+            img = tmp;
 
             // Configure Image Info
             info.width = FreeImage_GetWidth(img);
@@ -146,7 +147,7 @@ Result<std::shared_ptr<Texture>> Texture::createTextureFromFile(const utf8 *file
         Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         if (!bufferResult.hasError()) {
             texture->buffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
-            texture->buffer->fillBuffer(0, size, static_cast<void*>(rawImageInfo.pixels));
+            texture->buffer->fillBuffer(size, static_cast<void*>(rawImageInfo.pixels));
 
             VkExtent3D extent = {};
             texture->width = extent.width = rawImageInfo.width;

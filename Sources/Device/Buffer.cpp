@@ -197,11 +197,12 @@ Result<std::shared_ptr<Buffer>> Buffer::createSharedBuffer(VkDeviceSize siz,
     return Result<std::shared_ptr<Buffer>>::createError(result.getError());
 }
 
-Result<void> Buffer::fillBuffer(uint64 offset, uint64 size, void *data) {
+Result<void> Buffer::fillBuffer(uint64 size, void *data) {
     Result<VkDevice> result = this->getGraphicsDevice();
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
         VkDeviceMemory memory = this->memory->getMemory();
+        VkDeviceSize offset = this->memory->getMemoryOffset();
 
         // Copy Data
         void *mem;

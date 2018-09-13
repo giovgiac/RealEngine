@@ -5,6 +5,8 @@
  *
  */
 
+#include "Device.h"
+#include "GraphicsManager.h"
 #include "Renderer.h"
 #include "SpriteComponent.h"
 #include "Window.h"
@@ -12,6 +14,7 @@
 #include "WorldManager.h"
 
 #include <iostream>
+#include <vulkan/vulkan.h>
 
 WorldManager::WorldManager() {
     this->renderer = nullptr;
@@ -19,6 +22,22 @@ WorldManager::WorldManager() {
 
 WorldManager::~WorldManager() {
     this->renderer.reset();
+}
+
+Result<VkDevice> WorldManager::getGraphicsDevice() const noexcept {
+    GraphicsManager &graphicsManager = GraphicsManager::getManager();
+    Result<std::weak_ptr<const Device>> result = graphicsManager.getGraphicsDevice();
+
+    if (!result.hasError()) {
+        auto device = static_cast<std::weak_ptr<const Device>>(result);
+
+        if (std::shared_ptr<const Device> dev = device.lock())
+            return dev->getVulkanDevice();
+        else
+            return Result<VkDevice>::createError(Error::GraphicsManagerNotStartedUp);
+    }
+
+    return Result<VkDevice>::createError(result.getError());
 }
 
 Result<std::shared_ptr<Renderer>> WorldManager::getRenderer() const noexcept {
@@ -43,12 +62,10 @@ Result<void> WorldManager::play() {
                 = SpriteComponent::createSpriteComponent(glm::vec2(0.0f, 0.0f),
                                                          glm::angleAxis(glm::radians(0.0f),
                                                                         glm::vec3(0.0f,
-                                                                                  1.0f,
-                                                                                  0.0f)),
+                                                                                  0.0f,
+                                                                                  1.0f)),
                                                          glm::vec2(1.0f, 1.0f),
-                                                         "goku.png",
-                                                         "Shaders/vert.spv",
-                                                         "Shaders/frag.spv");
+                                                         "goku.png");
 
         if (!spriteResult.hasError()) {
             spriteComponent = static_cast<std::shared_ptr<SpriteComponent>>(spriteResult);
@@ -56,10 +73,14 @@ Result<void> WorldManager::play() {
         }
 
         while (!window->shouldClose()) {
+            // Update
+            spriteComponent->move(0.0005f, 0.0f);
+
             // Render Loop
             this->renderer->begin();
             this->renderer->draw(spriteComponent);
             this->renderer->end();
+
 
             window->pollEvents();
         }

@@ -74,7 +74,8 @@ public:
                         uint32 signalCount,
                         struct VkSemaphore_T *const *waits,
                         uint32 waitCount,
-                        uint32 *stages) const noexcept;
+                        uint32 *stages,
+                        struct VkFence_T *fence) const noexcept;
 
 public:
     Queue(const Queue &) = delete;

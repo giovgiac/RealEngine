@@ -37,6 +37,8 @@ private:
 
     std::shared_ptr<class Buffer> transformBuffer;
 
+    struct VkFence_T *imageFence;
+
     struct VkSemaphore_T *imageSemaphore;
 
     std::vector<struct VkSemaphore_T *> queueSemaphores;
@@ -62,9 +64,11 @@ private:
 
     Result<void> createDescriptorPool();
 
-    Result<void> createMaterial();
+    Result<void> createFences();
 
     Result<void> createFramebuffers();
+
+    Result<void> createMaterial();
 
     Result<void> createPipelineLayouts();
 
@@ -99,6 +103,8 @@ private:
     struct VkDescriptorSetLayoutCreateInfo getDescriptorSetLayoutCreateInfo(
             std::vector<struct VkDescriptorSetLayoutBinding> *bindings) const noexcept;
 
+    struct VkFenceCreateInfo getFenceCreateInfo() const noexcept;
+
     struct VkFramebufferCreateInfo getFramebufferCreateInfo(
             uint32 imageIndex) const noexcept;
 
@@ -108,10 +114,13 @@ private:
             struct VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
             struct VkPipelineViewportStateCreateInfo *viewportState,
             struct VkPipelineRasterizationStateCreateInfo *rasterizationState,
+            struct VkPipelineMultisampleStateCreateInfo *multisampleState,
             struct VkPipelineColorBlendStateCreateInfo *colorBlendState
     ) const noexcept;
 
     struct VkPipelineInputAssemblyStateCreateInfo getInputAssemblyStateCreateInfo() const noexcept;
+
+    struct VkPipelineMultisampleStateCreateInfo getMultisampleStateCreateInfo() const noexcept;
 
     struct VkPipelineLayoutCreateInfo getPipelineLayoutCreateInfo() const noexcept;
 
@@ -121,9 +130,13 @@ private:
 
     struct VkRect2D getRect2D() const noexcept;
 
+    struct VkRenderPassBeginInfo getRenderPassBeginInfo(
+            union VkClearValue *clearColor) const noexcept;
+
     struct VkRenderPassCreateInfo getRenderPassCreateInfo(
             std::vector<struct VkAttachmentDescription> *attachments,
-            std::vector<struct VkSubpassDescription> *subpasses) const noexcept;
+            std::vector<struct VkSubpassDescription> *subpasses,
+            std::vector<struct VkSubpassDependency> *dependencies) const noexcept;
 
     struct VkSamplerCreateInfo getSamplerCreateInfo() const noexcept;
 
@@ -131,12 +144,16 @@ private:
 
     std::vector<struct VkPipelineShaderStageCreateInfo> getShaderStageCreateInfo() const noexcept;
 
+    std::vector<struct VkSubpassDependency> getSubpassDependency() const noexcept;
+
     std::vector<struct VkSubpassDescription> getSubpassDescription(
             struct VkAttachmentReference *attachmentReference) const noexcept;
 
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
-    struct VkPipelineVertexInputStateCreateInfo getVertexInputStateCreateInfo() const noexcept;
+    struct VkPipelineVertexInputStateCreateInfo getVertexInputStateCreateInfo(
+            struct VkVertexInputBindingDescription *bindings,
+            std::vector<struct VkVertexInputAttributeDescription> *attributes) const noexcept;
 
     struct VkViewport getViewport() const noexcept;
 

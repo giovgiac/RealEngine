@@ -33,6 +33,7 @@ enum class Error : uint16 {
     FailedToCreateCommandPool,
     FailedToCreateDescriptorPool,
     FailedToCreateDescriptorSetLayout,
+    FailedToCreateFence,
     FailedToCreateFramebuffer,
     FailedToCreateGraphicsPipeline,
     FailedToCreateImageView,

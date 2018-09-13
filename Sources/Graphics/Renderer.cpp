@@ -156,13 +156,22 @@ Result<void> Renderer::createDescriptorPool() {
     return Result<void>::createError(result.getError());
 }
 
-Result<void> Renderer::createMaterial() {
-    Result<std::shared_ptr<Material>> result = Material::createMaterial("Shaders/vert.spv",
-                                                                        "Shaders/frag.spv");
+Result<void> Renderer::createFences() {
+    Result<VkDevice> result = this->getGraphicsDevice();
 
     if (!result.hasError()) {
-        this->material = static_cast<std::shared_ptr<Material>>(result);
-        return Result<void>::createError(Error::None);
+        auto device = static_cast<VkDevice>(result);
+        VkFenceCreateInfo fenceCreateInfo = this->getFenceCreateInfo();
+
+        if (vkCreateFence(device,
+                          &fenceCreateInfo,
+                          nullptr,
+                          &this->imageFence) == VK_SUCCESS) {
+            return Result<void>::createError(Error::None);
+        }
+        else {
+            return Result<void>::createError(Error::FailedToCreateFence);
+        }
     }
 
     return Result<void>::createError(result.getError());
@@ -186,6 +195,18 @@ Result<void> Renderer::createFramebuffers() {
             }
         }
 
+        return Result<void>::createError(Error::None);
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+Result<void> Renderer::createMaterial() {
+    Result<std::shared_ptr<Material>> result = Material::createMaterial("Shaders/vert.spv",
+                                                                        "Shaders/frag.spv");
+
+    if (!result.hasError()) {
+        this->material = static_cast<std::shared_ptr<Material>>(result);
         return Result<void>::createError(Error::None);
     }
 
@@ -221,12 +242,16 @@ Result<void> Renderer::createPipeline() {
         VkPipelineColorBlendAttachmentState attachmentState = this->getColorBlendAttachmentState();
         VkViewport viewport = this->getViewport();
         VkRect2D rect = this->getRect2D();
+        VkVertexInputBindingDescription bindings = Vertex::getBindingDescription();
+        std::vector<VkVertexInputAttributeDescription> attributes = Vertex::getAttributeDescription();
         std::vector<VkPipelineShaderStageCreateInfo> shaderStages = this->getShaderStageCreateInfo();
-        VkPipelineVertexInputStateCreateInfo vertexInputState = this->getVertexInputStateCreateInfo();
+        VkPipelineVertexInputStateCreateInfo vertexInputState = this->getVertexInputStateCreateInfo(&bindings,
+                                                                                                    &attributes);
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = this->getInputAssemblyStateCreateInfo();
         VkPipelineViewportStateCreateInfo viewportState = this->getViewportStateCreateInfo(&viewport,
                                                                                            &rect);
         VkPipelineRasterizationStateCreateInfo rasterizationState = this->getRasterizationStateCreateInfo();
+        VkPipelineMultisampleStateCreateInfo multisampleState = this->getMultisampleStateCreateInfo();
         VkPipelineColorBlendStateCreateInfo colorBlendState = this->getColorBlendStateCreateInfo(&attachmentState);
         VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo
                 = this->getGraphicsPipelineCreateInfo(&shaderStages,
@@ -234,6 +259,7 @@ Result<void> Renderer::createPipeline() {
                                                       &inputAssemblyState,
                                                       &viewportState,
                                                       &rasterizationState,
+                                                      &multisampleState,
                                                       &colorBlendState);
 
         if (vkCreateGraphicsPipelines(device,
@@ -257,11 +283,13 @@ Result<void> Renderer::createRenderPass() {
 
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
-        std::vector<VkAttachmentDescription> attachments = this->getAttachmentDescription();
         VkAttachmentReference reference = this->getAttachmentReference();
+        std::vector<VkAttachmentDescription> attachments = this->getAttachmentDescription();
         std::vector<VkSubpassDescription> subpasses = this->getSubpassDescription(&reference);
+        std::vector<VkSubpassDependency> dependencies = this->getSubpassDependency();
         VkRenderPassCreateInfo renderPassCreateInfo = this->getRenderPassCreateInfo(&attachments,
-                                                                                    &subpasses);
+                                                                                    &subpasses,
+                                                                                    &dependencies);
 
         if (vkCreateRenderPass(device,
                                &renderPassCreateInfo,
@@ -362,7 +390,7 @@ VkAttachmentReference Renderer::getAttachmentReference() const noexcept {
     VkAttachmentReference attachmentReference = {};
 
     attachmentReference.attachment = 0;
-    attachmentReference.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     return attachmentReference;
 }
@@ -475,6 +503,16 @@ VkDescriptorSetLayoutCreateInfo Renderer::getDescriptorSetLayoutCreateInfo(
     return descriptorSetLayoutCreateInfo;
 }
 
+VkFenceCreateInfo Renderer::getFenceCreateInfo() const noexcept {
+    VkFenceCreateInfo fenceCreateInfo = {};
+
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.pNext = nullptr;
+    fenceCreateInfo.flags = 0;
+
+    return fenceCreateInfo;
+}
+
 VkFramebufferCreateInfo Renderer::getFramebufferCreateInfo(
         uint32 imageIndex) const noexcept {
     VkFramebufferCreateInfo framebufferCreateInfo = {};
@@ -498,6 +536,7 @@ VkGraphicsPipelineCreateInfo Renderer::getGraphicsPipelineCreateInfo(
         VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
         VkPipelineViewportStateCreateInfo *viewportState,
         VkPipelineRasterizationStateCreateInfo *rasterizationState,
+        VkPipelineMultisampleStateCreateInfo *multisampleState,
         VkPipelineColorBlendStateCreateInfo *colorBlendState) const noexcept {
     VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
 
@@ -511,7 +550,7 @@ VkGraphicsPipelineCreateInfo Renderer::getGraphicsPipelineCreateInfo(
     graphicsPipelineCreateInfo.pTessellationState = nullptr;
     graphicsPipelineCreateInfo.pViewportState = viewportState;
     graphicsPipelineCreateInfo.pRasterizationState = rasterizationState;
-    graphicsPipelineCreateInfo.pMultisampleState = nullptr;
+    graphicsPipelineCreateInfo.pMultisampleState = multisampleState;
     graphicsPipelineCreateInfo.pDepthStencilState = nullptr;
     graphicsPipelineCreateInfo.pColorBlendState = colorBlendState;
     graphicsPipelineCreateInfo.pDynamicState = nullptr;
@@ -534,6 +573,22 @@ VkPipelineInputAssemblyStateCreateInfo Renderer::getInputAssemblyStateCreateInfo
     pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
     return pipelineInputAssemblyStateCreateInfo;
+}
+
+VkPipelineMultisampleStateCreateInfo Renderer::getMultisampleStateCreateInfo() const noexcept {
+    VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = {};
+
+    multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampleStateCreateInfo.pNext = nullptr;
+    multisampleStateCreateInfo.flags = 0;
+    multisampleStateCreateInfo.sampleShadingEnable = VK_FALSE;
+    multisampleStateCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampleStateCreateInfo.minSampleShading = 1.0f;
+    multisampleStateCreateInfo.pSampleMask = nullptr;
+    multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
+    multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
+
+    return multisampleStateCreateInfo;
 }
 
 VkPipelineLayoutCreateInfo Renderer::getPipelineLayoutCreateInfo() const noexcept {
@@ -572,7 +627,7 @@ VkPipelineRasterizationStateCreateInfo Renderer::getRasterizationStateCreateInfo
     rasterizationStateCreateInfo.pNext = nullptr;
     rasterizationStateCreateInfo.flags = 0;
     rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
-    rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_TRUE;
+    rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE;
     rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;
     rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -580,7 +635,7 @@ VkPipelineRasterizationStateCreateInfo Renderer::getRasterizationStateCreateInfo
     rasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
     rasterizationStateCreateInfo.depthBiasClamp = 0.0f;
     rasterizationStateCreateInfo.depthBiasSlopeFactor = 0.0f;
-    rasterizationStateCreateInfo.lineWidth = 0.0f;
+    rasterizationStateCreateInfo.lineWidth = 1.0f;
 
     return rasterizationStateCreateInfo;
 }
@@ -596,9 +651,27 @@ VkRect2D Renderer::getRect2D() const noexcept {
     return rect;
 }
 
+VkRenderPassBeginInfo Renderer::getRenderPassBeginInfo(VkClearValue *clearColor) const noexcept {
+    VkRenderPassBeginInfo renderPassBeginInfo = {};
+
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.pNext = nullptr;
+    renderPassBeginInfo.renderPass = this->renderPass;
+    renderPassBeginInfo.framebuffer = this->framebuffers[this->imageIndex];
+    renderPassBeginInfo.renderArea.offset.x = 0;
+    renderPassBeginInfo.renderArea.offset.y = 0;
+    renderPassBeginInfo.renderArea.extent.width = this->width;
+    renderPassBeginInfo.renderArea.extent.height = this->height;
+    renderPassBeginInfo.clearValueCount = 1;
+    renderPassBeginInfo.pClearValues = clearColor;
+
+    return renderPassBeginInfo;
+}
+
 VkRenderPassCreateInfo Renderer::getRenderPassCreateInfo(
         std::vector<VkAttachmentDescription> *attachments,
-        std::vector<VkSubpassDescription> *subpasses) const noexcept {
+        std::vector<VkSubpassDescription> *subpasses,
+        std::vector<VkSubpassDependency> *dependencies) const noexcept {
     VkRenderPassCreateInfo renderPassCreateInfo = {};
 
     renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -608,8 +681,8 @@ VkRenderPassCreateInfo Renderer::getRenderPassCreateInfo(
     renderPassCreateInfo.pAttachments = attachments->data();
     renderPassCreateInfo.subpassCount = static_cast<uint32>(subpasses->size());
     renderPassCreateInfo.pSubpasses = subpasses->data();
-    renderPassCreateInfo.dependencyCount = 0;
-    renderPassCreateInfo.pDependencies = nullptr;
+    renderPassCreateInfo.dependencyCount = static_cast<uint32>(dependencies->size());
+    renderPassCreateInfo.pDependencies = dependencies->data();
 
     return renderPassCreateInfo;
 }
@@ -673,6 +746,22 @@ std::vector<VkPipelineShaderStageCreateInfo> Renderer::getShaderStageCreateInfo(
     return pipelineShaderStageCreateInfo;
 }
 
+std::vector<VkSubpassDependency> Renderer::getSubpassDependency() const noexcept {
+    std::vector<VkSubpassDependency> dependencies (1);
+
+    // Configure Dependency
+    dependencies[0].dependencyFlags = 0;
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    return dependencies;
+}
+
 std::vector<VkSubpassDescription> Renderer::getSubpassDescription(
         VkAttachmentReference *attachmentReference) const noexcept {
     std::vector<VkSubpassDescription> subpasses (1);
@@ -708,16 +797,18 @@ Result<VkDevice> Renderer::getGraphicsDevice() const noexcept {
     return Result<VkDevice>::createError(result.getError());
 }
 
-VkPipelineVertexInputStateCreateInfo Renderer::getVertexInputStateCreateInfo() const noexcept {
+VkPipelineVertexInputStateCreateInfo Renderer::getVertexInputStateCreateInfo(
+        VkVertexInputBindingDescription *bindings,
+        std::vector<VkVertexInputAttributeDescription> *attributes) const noexcept {
     VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {};
 
     pipelineVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     pipelineVertexInputStateCreateInfo.pNext = nullptr;
     pipelineVertexInputStateCreateInfo.flags = 0;
-    pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
-    pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
-    pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
-    pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
+    pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+    pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = bindings;
+    pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32>(attributes->size());
+    pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = attributes->data();
 
     return pipelineVertexInputStateCreateInfo;
 }
@@ -781,13 +872,13 @@ void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComp
 
     // Configure Transform
     matrixTransform.model = spriteComponent->getModelTransform();
-    matrixTransform.view = glm::lookAtLH(glm::vec3(0.0f, 0.0f, -2.0f),
+    matrixTransform.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
                                          glm::vec3(0.0f, 0.0f, 0.0f),
                                          glm::vec3(0.0f, 1.0f, 0.0f));
-    matrixTransform.proj = glm::orthoLH(-4.0f, 4.0f, -4.0f, 4.0f, 0.0f, 1.0f);
+    matrixTransform.proj = glm::ortho(-128.0f, 128.0f, -128.0f, 128.0f, -128.0f, 128.0f);
 
     // Fill Transform Buffer
-    this->transformBuffer->fillBuffer(0, sizeof(matrixTransform), &matrixTransform);
+    this->transformBuffer->fillBuffer(sizeof(matrixTransform), &matrixTransform);
 
     // Configure Buffer Info
     descriptorBufferInfo.buffer = static_cast<VkBuffer>(this->transformBuffer->getVulkanBuffer());
@@ -857,12 +948,10 @@ Renderer::~Renderer() {
 
 Result<void> Renderer::begin() {
     Result<VkDevice> result = this->getGraphicsDevice();
+    VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
 
     if (!result.hasError()) {
         this->device = static_cast<VkDevice>(result);
-
-        // Bind Pipelines
-        this->deviceQueues[0]->bindPipeline(this->pipeline);
 
         // Acquire Next Image
         if (vkAcquireNextImageKHR(this->device,
@@ -874,7 +963,14 @@ Result<void> Renderer::begin() {
             return Result<void>::createError(Error::FailedToAcquireNextImage);
         }
 
-        std::cout << "Image Index: " << this->imageIndex << std::endl;
+        // Begin Render Pass
+        VkClearValue clearColor = { 0.5f, 0.75f, 0.25f, 1.0f };
+        VkRenderPassBeginInfo renderPassBeginInfo = this->getRenderPassBeginInfo(&clearColor);
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        // Bind Pipelines
+        this->deviceQueues[0]->bindPipeline(this->pipeline);
+
         return Result<void>::createError(Error::None);
     }
 
@@ -882,9 +978,13 @@ Result<void> Renderer::begin() {
 }
 
 void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
+    VkBuffer vertexBuffers = static_cast<VkBuffer>(spriteComponent->getVertexBuffer()->getVulkanBuffer());
+    VkDeviceSize offsets = 0;
     VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
 
     this->updateDescriptorSets(spriteComponent);
+
+    // Bind Descriptors
     vkCmdBindDescriptorSets(cmdBuffer,
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             this->pipelineLayout,
@@ -894,24 +994,28 @@ void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
                             0,
                             nullptr);
 
-
+    // Draw Vertices
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers, &offsets);
+    vkCmdDraw(cmdBuffer, 6, 1, 0, 0);
 }
 
 Result<void> Renderer::end() {
     auto queue = static_cast<VkQueue>(this->deviceQueues[0]->getVulkanQueue());
     VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkPresentInfoKHR presentInfoKHR = this->getPresentInfoKHR();
+    VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
 
     // Submit Buffers
-    this->deviceQueues[0]->submit(&this->queueSemaphores[0], 1, &this->imageSemaphore, 1, &stage);
+    vkCmdEndRenderPass(cmdBuffer);
+    this->deviceQueues[0]->submit(&this->queueSemaphores[0], 1, &this->imageSemaphore, 1, &stage, VK_NULL_HANDLE);
+
+    // Reset Buffers
+    vkQueueWaitIdle(queue);
+    this->deviceQueues[0]->resetBuffers();
 
     if (vkQueuePresentKHR(queue, &presentInfoKHR) != VK_SUCCESS) {
         return Result<void>::createError(Error::FailedToPresentImage);
     }
-
-    // Reset Buffers
-    vkDeviceWaitIdle(this->device);
-    this->deviceQueues[0]->resetBuffers();
 
     return Result<void>::createError(Error::None);
 }
@@ -943,7 +1047,8 @@ Result<void> Renderer::executeTransferBuffer(VkCommandBuffer cmdBuffer) const no
                 submitInfo.pWaitDstStageMask = nullptr;
 
                 VkResult submitResult = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-                VkResult waitResult = vkQueueWaitIdle(queue);
+                VkResult waitResult = vkDeviceWaitIdle(device);
+                //VkResult waitResult = vkQueueWaitIdle(queue);
 
                 if (submitResult == VK_SUCCESS && waitResult == VK_SUCCESS) {
                     vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
@@ -1074,6 +1179,11 @@ Result<void> Renderer::startup() {
         return Result<void>::createError(semaphoreResult.getError());
     }
 
+    Result<void> fenceResult = this->createFences();
+    if (fenceResult.hasError()) {
+        return Result<void>::createError(fenceResult.getError());
+    }
+
     return Result<void>::createError(Error::None);
 }
 
@@ -1085,6 +1195,11 @@ void Renderer::shutdown() {
 
         // Finish Work
         vkDeviceWaitIdle(device);
+
+        if (this->imageFence != VK_NULL_HANDLE) {
+            vkDestroyFence(device, this->imageFence, nullptr);
+            this->imageFence = VK_NULL_HANDLE;
+        }
 
         for (auto &semaphore : this->queueSemaphores) {
             if (semaphore != VK_NULL_HANDLE) {

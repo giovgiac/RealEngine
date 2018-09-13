@@ -20,6 +20,8 @@ private:
 
     ~WorldManager();
 
+    Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
+
 public:
     inline static WorldManager &getManager() noexcept {
         static WorldManager inst;
