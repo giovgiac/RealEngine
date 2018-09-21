@@ -35,7 +35,7 @@ private:
 
     uint32 imageIndex;
 
-    std::shared_ptr<class Buffer> transformBuffer;
+    std::vector<std::shared_ptr<class Buffer>> transformBuffers;
 
     struct VkFence_T *imageFence;
 
@@ -54,6 +54,9 @@ private:
     uint32 width;
 
     uint32 height;
+
+    std::forward_list<std::shared_ptr<class SpriteComponent>> objectsToRender;
+    uint32 numOfObjectsToRender;
 
 private:
     Result<void> acquireSwapchainAndBuffers();
@@ -80,7 +83,7 @@ private:
 
     Result<void> createTextureSampler();
 
-    Result<void> createTransformBuffer();
+    Result<void> createTransformBuffers();
 
     std::vector<struct VkAttachmentDescription> getAttachmentDescription() const noexcept;
 
@@ -165,16 +168,20 @@ private:
 
     struct VkCommandBuffer_T *selectCommandBuffer() const noexcept;
 
-    void updateDescriptorSets(std::shared_ptr<class SpriteComponent> &spriteComponent);
+    void updateDescriptorSets();
 
 public:
     explicit Renderer();
 
     virtual ~Renderer();
 
+    void addObject(std::shared_ptr<class SpriteComponent> &object);
+
     Result<void> begin();
 
-    void draw(std::shared_ptr<class SpriteComponent> spriteComponent);
+    Result<void> load();
+
+    void draw();
 
     Result<void> end();
 

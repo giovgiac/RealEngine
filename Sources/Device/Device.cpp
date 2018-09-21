@@ -219,8 +219,8 @@ Result<void> Device::selectVulkanPhysicalDevice() {
         for (auto &&pd : physicalDeviceList) {
             if (this->checkPhysicalDeviceExtensions(pd) && this->checkPhysicalDeviceFeatures(pd) &&
                 this->checkPhysicalDeviceLimits(pd)) {
-                this->physicalDevice = pd;
 
+                this->physicalDevice = pd;
                 return Result<void>::createError(Error::None);
             }
         }

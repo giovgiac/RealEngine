@@ -62,6 +62,8 @@ public:
                                                       uint32 familyIndex,
                                                       uint32 queueIndex);
 
+    inline uint32 getFamily() const noexcept { return this->familyIndex; }
+
     Result<struct VkCommandBuffer_T *> getVulkanBuffer() const noexcept;
 
     Result<struct VkCommandPool_T *> getVulkanPool() const noexcept;

@@ -218,6 +218,7 @@ Result<std::shared_ptr<Image>> Image::createImage(VkExtent3D ext,
         if (rslt == VK_SUCCESS) {
             Result<void> res = image->allocateMemory();
 
+            std::cout << "Creating Image Resource: " << image->image << std::endl;
             if (!res.hasError()) {
                 return Result<std::shared_ptr<Image>>(std::move(image));
             }
@@ -264,6 +265,7 @@ Result<std::shared_ptr<Image>> Image::createSharedImage(VkExtent3D ext,
         if (rslt == VK_SUCCESS) {
             Result<void> res = image->allocateMemory();
 
+            std::cout << "Creating Image Resource: " << image->image << std::endl;
             if (!res.hasError()) {
                 return Result<std::shared_ptr<Image>>(std::move(image));
             }

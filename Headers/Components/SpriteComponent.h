@@ -54,14 +54,20 @@ public:
 
     std::shared_ptr<class Buffer> getVertexBuffer() const noexcept;
 
+    Result<void> load();
+
     void move(float dx, float dy);
 
-    Result<void> load();
+    void rotate(float angle);
+
+    void setPosition(float x, float y);
+
+    void setRotation(float angle);
 
     static Result<std::shared_ptr<SpriteComponent>> createSpriteComponent(glm::vec2 pos,
                                                                           glm::quat rot,
                                                                           glm::vec2 sc,
-                                                                          const utf8 *textureFilename);
+                                                                          std::shared_ptr<class Texture> txt);
 
 public:
     SpriteComponent(const SpriteComponent &) = delete;

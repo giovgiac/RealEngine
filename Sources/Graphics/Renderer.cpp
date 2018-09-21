@@ -94,17 +94,19 @@ Result<void> Renderer::allocateDescriptorSets() {
 
     if (!result.hasError()) {
         auto device = static_cast<VkDevice>(result);
-        VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = this->getDescriptorSetAllocateInfo();
 
-        this->descriptorSets.resize(1);
-        if (vkAllocateDescriptorSets(device,
-                &descriptorSetAllocateInfo,
-                this->descriptorSets.data()) == VK_SUCCESS) {
-            return Result<void>::createError(Error::None);
+        this->descriptorSets.resize(this->numOfObjectsToRender);
+        for (uint32 i = 0; i < this->numOfObjectsToRender; i++) {
+            VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = this->getDescriptorSetAllocateInfo();
+
+            if (vkAllocateDescriptorSets(device,
+                                         &descriptorSetAllocateInfo,
+                                         &this->descriptorSets[i]) != VK_SUCCESS) {
+                return Result<void>::createError(Error::FailedToAllocateDescriptorSets);
+            }
         }
-        else {
-            return Result<void>::createError(Error::FailedToAllocateDescriptorSets);
-        }
+
+        return Result<void>::createError(Error::None);
     }
 
     return Result<void>::createError(result.getError());
@@ -358,14 +360,18 @@ Result<void> Renderer::createTextureSampler() {
     return Result<void>::createError(result.getError());
 }
 
-Result<void> Renderer::createTransformBuffer() {
-    Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(sizeof(Transform),
-                                                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    if (bufferResult.hasError()) {
-        return Result<void>::createError(bufferResult.getError());
+Result<void> Renderer::createTransformBuffers() {
+    this->transformBuffers.resize(this->numOfObjectsToRender);
+    for (auto &buffer : this->transformBuffers) {
+        Result<std::shared_ptr<Buffer>> bufferResult = Buffer::createBuffer(sizeof(Transform),
+                                                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        if (bufferResult.hasError()) {
+            return Result<void>::createError(bufferResult.getError());
+        }
+
+        buffer = std::move(static_cast<std::shared_ptr<Buffer>>(bufferResult));
     }
 
-    this->transformBuffer = static_cast<std::shared_ptr<Buffer>>(bufferResult);
     return Result<void>::createError(Error::None);
 }
 
@@ -469,7 +475,7 @@ VkDescriptorPoolCreateInfo Renderer::getDescriptorPoolCreateInfo(
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptorPoolCreateInfo.pNext = nullptr;
     descriptorPoolCreateInfo.flags = 0;
-    descriptorPoolCreateInfo.maxSets = 2;
+    descriptorPoolCreateInfo.maxSets = this->numOfObjectsToRender;
     descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32>(poolSize->size());
     descriptorPoolCreateInfo.pPoolSizes = poolSize->data();
 
@@ -696,9 +702,9 @@ VkSamplerCreateInfo Renderer::getSamplerCreateInfo() const noexcept {
     samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
     samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
     samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
     samplerCreateInfo.mipLodBias = 0.0f;
     samplerCreateInfo.anisotropyEnable = VK_FALSE;
@@ -864,59 +870,69 @@ VkCommandBuffer Renderer::selectCommandBuffer() const noexcept {
     return static_cast<VkCommandBuffer>(cmdBuffer);
 }
 
-void Renderer::updateDescriptorSets(std::shared_ptr<SpriteComponent> &spriteComponent) {
-    Transform matrixTransform = {};
-    VkDescriptorBufferInfo descriptorBufferInfo = {};
-    VkDescriptorImageInfo descriptorImageInfo = {};
-    VkWriteDescriptorSet writeDescriptorSet[2] = {};
+void Renderer::updateDescriptorSets() {
+    static glm::mat4 lookAtTransform = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
+                                                   glm::vec3(0.0f, 0.0f, 0.0f),
+                                                   glm::vec3(0.0f, 1.0f, 0.0f));
+    static glm::mat4 orthoTransform = glm::ortho(-256.0f, 256.0f, -256.0f, 256.0f, -256.0f, 256.0f);
 
-    // Configure Transform
-    matrixTransform.model = spriteComponent->getModelTransform();
-    matrixTransform.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
-                                         glm::vec3(0.0f, 0.0f, 0.0f),
-                                         glm::vec3(0.0f, 1.0f, 0.0f));
-    matrixTransform.proj = glm::ortho(-128.0f, 128.0f, -128.0f, 128.0f, -128.0f, 128.0f);
+    VkDevice device = static_cast<VkDevice>(this->getGraphicsDevice());
+    std::vector<VkDescriptorBufferInfo> descriptorBufferInfo(this->numOfObjectsToRender);
+    std::vector<VkDescriptorImageInfo> descriptorImageInfo(this->numOfObjectsToRender);
+    std::vector<VkWriteDescriptorSet> writeDescriptorSet(2 * this->numOfObjectsToRender);
+    uint32 index = 0;
 
-    // Fill Transform Buffer
-    this->transformBuffer->fillBuffer(sizeof(matrixTransform), &matrixTransform);
+    for (auto &obj : this->objectsToRender) {
+        Transform matrixTransform = {};
 
-    // Configure Buffer Info
-    descriptorBufferInfo.buffer = static_cast<VkBuffer>(this->transformBuffer->getVulkanBuffer());
-    descriptorBufferInfo.offset = 0;
-    descriptorBufferInfo.range = VK_WHOLE_SIZE;
+        // Configure Transform
+        matrixTransform.model = obj->getModelTransform();
+        matrixTransform.view = lookAtTransform;
+        matrixTransform.proj = orthoTransform;
 
-    // Configure Image Info
-    descriptorImageInfo.sampler = this->textureSampler;
-    descriptorImageInfo.imageView = spriteComponent->getTexture()->getImageView();
-    descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        // Fill Transform Buffer
+        this->transformBuffers[index]->fillBuffer(sizeof(matrixTransform), &matrixTransform);
 
-    // Configure Transform Matrix
-    writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[0].pNext = nullptr;
-    writeDescriptorSet[0].dstSet = this->descriptorSets[0];
-    writeDescriptorSet[0].dstBinding = 0;
-    writeDescriptorSet[0].dstArrayElement = 0;
-    writeDescriptorSet[0].descriptorCount = 1;
-    writeDescriptorSet[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writeDescriptorSet[0].pImageInfo = nullptr;
-    writeDescriptorSet[0].pBufferInfo = &descriptorBufferInfo;
-    writeDescriptorSet[0].pTexelBufferView = nullptr;
+        // Configure Transform Data
+        descriptorBufferInfo[index].buffer =
+                static_cast<VkBuffer>(this->transformBuffers[index]->getVulkanBuffer());
+        descriptorBufferInfo[index].offset = 0;
+        descriptorBufferInfo[index].range = VK_WHOLE_SIZE;
 
-    // Configure Texture and Sampler
-    writeDescriptorSet[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[1].pNext = nullptr;
-    writeDescriptorSet[1].dstSet = this->descriptorSets[0];
-    writeDescriptorSet[1].dstBinding = 1;
-    writeDescriptorSet[1].dstArrayElement = 0;
-    writeDescriptorSet[1].descriptorCount = 1;
-    writeDescriptorSet[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescriptorSet[1].pImageInfo = &descriptorImageInfo;
-    writeDescriptorSet[1].pBufferInfo = nullptr;
-    writeDescriptorSet[1].pTexelBufferView = nullptr;
+        // Confiogure Texture Data
+        descriptorImageInfo[index].sampler = this->textureSampler;
+        descriptorImageInfo[index].imageView = obj->getTexture()->getImageView();
+        descriptorImageInfo[index].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    vkUpdateDescriptorSets(this->device,
-                           2,
-                           writeDescriptorSet,
+        // Write Data To Descriptor Sets
+        writeDescriptorSet[2 * index + 0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet[2 * index + 0].pNext = nullptr;
+        writeDescriptorSet[2 * index + 0].dstSet = this->descriptorSets[index];
+        writeDescriptorSet[2 * index + 0].dstBinding = 0;
+        writeDescriptorSet[2 * index + 0].dstArrayElement = 0;
+        writeDescriptorSet[2 * index + 0].descriptorCount = 1;
+        writeDescriptorSet[2 * index + 0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSet[2 * index + 0].pImageInfo = nullptr;
+        writeDescriptorSet[2 * index + 0].pBufferInfo = &descriptorBufferInfo[index];
+        writeDescriptorSet[2 * index + 0].pTexelBufferView = nullptr;
+
+        writeDescriptorSet[2 * index + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet[2 * index + 1].pNext = nullptr;
+        writeDescriptorSet[2 * index + 1].dstSet = this->descriptorSets[index];
+        writeDescriptorSet[2 * index + 1].dstBinding = 1;
+        writeDescriptorSet[2 * index + 1].dstArrayElement = 0;
+        writeDescriptorSet[2 * index + 1].descriptorCount = 1;
+        writeDescriptorSet[2 * index + 1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptorSet[2 * index + 1].pImageInfo = &descriptorImageInfo[index];
+        writeDescriptorSet[2 * index + 1].pBufferInfo = nullptr;
+        writeDescriptorSet[2 * index + 1].pTexelBufferView = nullptr;
+
+        index++;
+    }
+
+    vkUpdateDescriptorSets(device,
+                           static_cast<uint32>(writeDescriptorSet.size()),
+                           writeDescriptorSet.data(),
                            0,
                            nullptr);
 }
@@ -936,6 +952,8 @@ Renderer::Renderer() {
     this->imageIndex = 0;
     this->width = 0;
     this->height = 0;
+    this->objectsToRender = {};
+    this->numOfObjectsToRender = 0;
 }
 
 Renderer::~Renderer() {
@@ -944,6 +962,11 @@ Renderer::~Renderer() {
         std::cout << "WARNING: Renderer deleted without being shutdown..." << std::endl;
         this->shutdown();
     }
+}
+
+void Renderer::addObject(std::shared_ptr<SpriteComponent> &object) {
+    this->objectsToRender.push_front(object);
+    this->numOfObjectsToRender++;
 }
 
 Result<void> Renderer::begin() {
@@ -964,7 +987,7 @@ Result<void> Renderer::begin() {
         }
 
         // Begin Render Pass
-        VkClearValue clearColor = { 0.5f, 0.75f, 0.25f, 1.0f };
+        VkClearValue clearColor = { 0.922f, 0.808f, 0.529f, 1.0f };
         VkRenderPassBeginInfo renderPassBeginInfo = this->getRenderPassBeginInfo(&clearColor);
         vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -977,26 +1000,55 @@ Result<void> Renderer::begin() {
     return Result<void>::createError(result.getError());
 }
 
-void Renderer::draw(std::shared_ptr<SpriteComponent> spriteComponent) {
-    VkBuffer vertexBuffers = static_cast<VkBuffer>(spriteComponent->getVertexBuffer()->getVulkanBuffer());
-    VkDeviceSize offsets = 0;
+Result<void> Renderer::load() {
+    Result<void> result = this->createDescriptorPool();
+
+    if (!result.hasError()) {
+        Result<void> rslt = this->allocateDescriptorSets();
+
+        if (!rslt.hasError()) {
+            Result<void> res = this->createTransformBuffers();
+
+            if (!res.hasError()) {
+                this->updateDescriptorSets();
+                this->objectsToRender.front()->load();
+                return Result<void>::createError(Error::None);
+            }
+            else {
+                return Result<void>::createError(res.getError());
+            }
+        }
+        else {
+            return Result<void>::createError(rslt.getError());
+        }
+    }
+
+    return Result<void>::createError(result.getError());
+}
+
+void Renderer::draw() {
+    VkBuffer buffer = static_cast<VkBuffer>(this->objectsToRender.front()->getVertexBuffer()->getVulkanBuffer());
     VkCommandBuffer cmdBuffer = this->selectCommandBuffer();
+    VkDeviceSize offsets[] = { 0 };
 
-    this->updateDescriptorSets(spriteComponent);
+    vkCmdBindVertexBuffers(cmdBuffer,
+                           0,
+                           1,
+                           &buffer,
+                           offsets);
 
-    // Bind Descriptors
-    vkCmdBindDescriptorSets(cmdBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            this->pipelineLayout,
-                            0,
-                            1,
-                            &this->descriptorSets[0],
-                            0,
-                            nullptr);
-
-    // Draw Vertices
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffers, &offsets);
-    vkCmdDraw(cmdBuffer, 6, 1, 0, 0);
+    this->updateDescriptorSets();
+    for (uint32 i = 0; i < this->numOfObjectsToRender; i++) {
+        vkCmdBindDescriptorSets(cmdBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                this->pipelineLayout,
+                                0,
+                                1,
+                                &this->descriptorSets[i],
+                                0,
+                                nullptr);
+        vkCmdDraw(cmdBuffer, 6, 1, 0, 0);
+    }
 }
 
 Result<void> Renderer::end() {
@@ -1047,8 +1099,7 @@ Result<void> Renderer::executeTransferBuffer(VkCommandBuffer cmdBuffer) const no
                 submitInfo.pWaitDstStageMask = nullptr;
 
                 VkResult submitResult = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-                VkResult waitResult = vkDeviceWaitIdle(device);
-                //VkResult waitResult = vkQueueWaitIdle(queue);
+                VkResult waitResult = vkQueueWaitIdle(queue);
 
                 if (submitResult == VK_SUCCESS && waitResult == VK_SUCCESS) {
                     vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
@@ -1134,16 +1185,6 @@ Result<void> Renderer::startup() {
         return Result<void>::createError(descriptorLayoutResult.getError());
     }
 
-    Result<void> descriptorPoolResult = this->createDescriptorPool();
-    if (descriptorPoolResult.hasError()) {
-        return Result<void>::createError(descriptorPoolResult.getError());
-    }
-
-    Result<void> descriptorSetResult = this->allocateDescriptorSets();
-    if (descriptorSetResult.hasError()) {
-        return Result<void>::createError(descriptorSetResult.getError());
-    }
-
     Result<void> pipelineLayoutResult = this->createPipelineLayouts();
     if (pipelineLayoutResult.hasError()) {
         return Result<void>::createError(pipelineLayoutResult.getError());
@@ -1167,11 +1208,6 @@ Result<void> Renderer::startup() {
     Result<void> samplerResult = this->createTextureSampler();
     if (samplerResult.hasError()) {
         return Result<void>::createError(samplerResult.getError());
-    }
-
-    Result<void> transformResult = this->createTransformBuffer();
-    if (transformResult.hasError()) {
-        return Result<void>::createError(transformResult.getError());
     }
 
     Result<void> semaphoreResult = this->createSemaphores();
@@ -1264,10 +1300,10 @@ void Renderer::shutdown() {
     }
 
     this->material.reset();
-    this->transformBuffer.reset();
 
     this->deviceQueues.clear();
     this->imageBuffers.clear();
+    this->transformBuffers.clear();
 
     this->device = VK_NULL_HANDLE;
     this->swapchain = VK_NULL_HANDLE;

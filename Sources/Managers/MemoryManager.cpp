@@ -68,7 +68,8 @@ Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint6
     for (auto &alloc : allocatorList) {
         if (alloc->getAllocatorAlignment() == alignment &&
             alloc->getAllocatorChunkSize() == chunkSize &&
-            alloc->getAllocatorFlags() == flags) {
+            alloc->getAllocatorFlags() == flags &&
+            alloc->hasMemory()) {
 
             return Result<std::shared_ptr<PoolAllocator>>(alloc);
         }

@@ -132,40 +132,50 @@ std::shared_ptr<Buffer> SpriteComponent::getVertexBuffer() const noexcept {
     return this->vertexBuffer;
 }
 
-void SpriteComponent::move(float dx, float dy) {
-    this->position.x += dx;
-    this->position.y += dy;
-}
-
 Result<void> SpriteComponent::load() {
     Result<void> vertexResult = this->setupVertexBuffer();
     if (vertexResult.hasError()) {
         return Result<void>::createError(vertexResult.getError());
     }
 
+    /*
     Result<void> textureResult = this->texture->load();
     if (textureResult.hasError()) {
         return Result<void>::createError(textureResult.getError());
     }
+    */
 
     return Result<void>::createError(Error::None);
+}
+
+void SpriteComponent::move(float dx, float dy) {
+    this->position.x += dx;
+    this->position.y += dy;
+}
+
+void SpriteComponent::rotate(float angle) {
+    this->rotation += glm::angleAxis(glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
+}
+
+void SpriteComponent::setPosition(float x, float y) {
+    this->position.x = x;
+    this->position.y = y;
+}
+
+void SpriteComponent::setRotation(float angle) {
+    this->rotation = glm::angleAxis(glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
 Result<std::shared_ptr<SpriteComponent>> SpriteComponent::createSpriteComponent(glm::vec2 pos,
                                                                                 glm::quat rot,
                                                                                 glm::vec2 sc,
-                                                                                const utf8 *textureFilename) {
+                                                                                std::shared_ptr<Texture> txt) {
     std::shared_ptr<SpriteComponent> spriteComponent(new SpriteComponent);
-    Result<std::shared_ptr<Texture>> result = Texture::createTextureFromFile(textureFilename);
 
     spriteComponent->position = pos;
     spriteComponent->rotation = rot;
     spriteComponent->scale = sc;
+    spriteComponent->texture = std::move(txt);
 
-    if (!result.hasError()) {
-        spriteComponent->texture = static_cast<std::shared_ptr<Texture>>(result);
-        return Result<std::shared_ptr<SpriteComponent>>(spriteComponent);
-    }
-
-    return Result<std::shared_ptr<SpriteComponent>>::createError(result.getError());
+    return Result<std::shared_ptr<SpriteComponent>>(spriteComponent);
 }

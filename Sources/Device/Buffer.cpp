@@ -149,6 +149,7 @@ Result<std::shared_ptr<Buffer>> Buffer::createBuffer(VkDeviceSize siz, VkBufferU
         if (rslt == VK_SUCCESS) {
             Result<void> res = buffer->allocateMemory();
 
+            std::cout << "Creating Buffer Resource: " << buffer->buffer << std::endl;
             if (!res.hasError()) {
                 return Result<std::shared_ptr<Buffer>>(std::move(buffer));
             }
@@ -183,6 +184,7 @@ Result<std::shared_ptr<Buffer>> Buffer::createSharedBuffer(VkDeviceSize siz,
         if (rslt == VK_SUCCESS) {
             Result<void> res = buffer->allocateMemory();
 
+            std::cout << "Creating Buffer Resource: " << buffer->buffer << std::endl;
             if (!res.hasError()) {
                 return Result<std::shared_ptr<Buffer>>(std::move(buffer));
             }

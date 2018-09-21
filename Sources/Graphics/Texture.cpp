@@ -31,8 +31,8 @@ Result<void> Texture::createImageView() {
 
     // Configure Components
     components.r = VK_COMPONENT_SWIZZLE_R;
-    components.b = VK_COMPONENT_SWIZZLE_B;
     components.g = VK_COMPONENT_SWIZZLE_G;
+    components.b = VK_COMPONENT_SWIZZLE_B;
     components.a = VK_COMPONENT_SWIZZLE_A;
 
     // Configure Subresource
@@ -100,7 +100,6 @@ Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {
 
         if (img && tmp) {
             FreeImage_Unload(img);
-            //img = FreeImage_Rescale(tmp, TILE_SIZE, TILE_SIZE);
             img = tmp;
 
             // Configure Image Info

@@ -130,6 +130,8 @@ public:
 
     inline uint32 getAllocatorFlags() const noexcept { return this->flags; }
 
+    inline bool hasMemory() const noexcept { return !this->freeList.empty(); }
+
     /**
      * O método que os alocadores necessitam para que outros objetos possam efetuar requisições de alocações
      * de espaços de memória de vídeo.
