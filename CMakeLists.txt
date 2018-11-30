@@ -89,7 +89,7 @@ set(HEADERS Headers/Core/Error.h
         Headers/Managers/MemoryManager.h
         Headers/Managers/WindowManager.h
         Headers/Managers/WorldManager.h
-        Tests/TestManagerFixture.h)
+        Tests/TestManagerFixture.h Headers/Core/Game.h)
 
 # Source Files
 set(SOURCES Sources/Device/Buffer.cpp
@@ -109,6 +109,18 @@ set(SOURCES Sources/Device/Buffer.cpp
         Sources/Managers/WindowManager.cpp
         Sources/Managers/WorldManager.cpp
         Tests/TestManagers.cpp
-        Tests/TestResources.cpp)
+        Tests/TestResources.cpp Sources/Core/Game.cpp)
+
+# Copy Shaders
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Shaders/vert.spv
+        ${CMAKE_CURRENT_BINARY_DIR}/Shaders
+        COPYONLY
+)
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Shaders/frag.spv
+        ${CMAKE_CURRENT_BINARY_DIR}/Shaders
+        COPYONLY
+)
 
 add_executable(RealEngine main.cpp ${SOURCES} ${HEADERS})

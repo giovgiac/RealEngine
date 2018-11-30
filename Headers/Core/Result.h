@@ -77,6 +77,13 @@ public:
      */
     inline bool hasError() const noexcept { return bHasError; }
 
+    inline T unwrap() {
+        if (hasError())
+            throw std::invalid_argument("Requested value of Result with errors...");
+
+        return std::move(value);
+    }
+
 public:
     /**
      * O operador que permite a criação de objetos do tipo Result a partir do operador de atribuição sendo igualado a

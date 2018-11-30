@@ -138,13 +138,6 @@ Result<void> SpriteComponent::load() {
         return Result<void>::createError(vertexResult.getError());
     }
 
-    /*
-    Result<void> textureResult = this->texture->load();
-    if (textureResult.hasError()) {
-        return Result<void>::createError(textureResult.getError());
-    }
-    */
-
     return Result<void>::createError(Error::None);
 }
 

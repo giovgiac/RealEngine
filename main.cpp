@@ -5,64 +5,68 @@
  *
  */
 
-#include "Buffer.h"
-#include "Device.h"
-#include "GraphicsManager.h"
-#include "Image.h"
-#include "Instance.h"
-#include "Material.h"
-#include "Memory.h"
-#include "MemoryManager.h"
-#include "PoolAllocator.h"
+#include "Game.h"
 #include "Renderer.h"
 #include "SpriteComponent.h"
 #include "Texture.h"
-#include "Window.h"
-#include "WindowManager.h"
 #include "WorldManager.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+class MyGame : public Game {
+public:
+    void begin() override {
+        WorldManager &worldManager = WorldManager::getManager();
+        std::shared_ptr<Renderer> renderer = worldManager.getRenderer().unwrap();
+
+        // Create Textures
+        std::shared_ptr<Texture> gokuTexture = Texture::createTextureFromFile("goku.png").unwrap();
+
+        // Load Textures
+        gokuTexture->load();
+
+        // Create Sprites
+        std::forward_list<std::shared_ptr<SpriteComponent>> components = {};
+        for (uint32 i = 0; i < 1000; ++i) {
+            std::shared_ptr<SpriteComponent> sprite = SpriteComponent::createSpriteComponent(
+                    glm::vec2(rand() % 25600 / 100.0f - rand() % 25600 / 100.0f,
+                            rand() % 25600 / 100.0f - rand() % 25600 / 100.0f),
+                    glm::angleAxis(glm::radians(rand() % 18000 / 100.0f),
+                            glm::vec3(0.0f,
+                                    0.0f,
+                                    1.0f)),
+                    glm::vec2(2.0f, 2.0f),
+                    gokuTexture).unwrap();
+
+            components.emplace_front(sprite);
+        }
+
+        for (auto &spr : components) {
+            renderer->addObject(spr);
+        }
+
+        renderer->load();
+    }
+
+    void update() override {
+
+    }
+};
+
 int main() {
-    GraphicsManager &graphicsManager = GraphicsManager::getManager();
-    MemoryManager &memoryManager = MemoryManager::getManager();
-    WindowManager &windowManager = WindowManager::getManager();
-    WorldManager &worldManager = WorldManager::getManager();
+    MyGame game;
 
-    // Startup Managers
-    Result<void> graphicsResult = graphicsManager.startup();
-    if (graphicsResult.hasError()) {
+    if (game.startup().hasError()) {
+        std::cout << "ERROR: Failed to startup Game..." << std::endl;
         return 1;
     }
 
-    Result<void> memoryResult = memoryManager.startup();
-    if (memoryResult.hasError()) {
+    if (game.play().hasError()) {
+        std::cout << "ERROR: Failed to play Game..." << std::endl;
         return 1;
     }
 
-    Result<void> windowResult = windowManager.startup();
-    if (windowResult.hasError()) {
-        return 1;
-    }
-
-    Result<void> worldResult = worldManager.startup();
-    if (worldResult.hasError()) {
-        return 1;
-    }
-
-    // Test Render Loop
-    Result<void> playResult = worldManager.play();
-    if (playResult.hasError()) {
-        std::cout << "Render Loop Error: " << static_cast<uint32>(playResult.getError()) << std::endl;
-        return 1;
-    }
-
-    // Shutdown Managers
-    worldManager.shutdown();
-    windowManager.shutdown();
-    memoryManager.shutdown();
-    graphicsManager.shutdown();
-
+    game.shutdown();
     return EXIT_SUCCESS;
 }

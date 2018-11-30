@@ -30,7 +30,7 @@ public:
 
     Result<std::shared_ptr<class Renderer>> getRenderer() const noexcept;
 
-    Result<void> play();
+    Result<void> play(class Game *game);
 
     Result<void> startup();
 
