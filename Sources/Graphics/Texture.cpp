@@ -105,7 +105,7 @@ Result<RawImageInfo> Texture::loadImage(const utf8 *filename) const noexcept {
             // Configure Image Info
             info.width = FreeImage_GetWidth(img);
             info.height = FreeImage_GetHeight(img);
-            info.pixels = static_cast<uint8*>(FreeImage_GetBits(img));
+            info.pixels = FreeImage_GetBits(img);
 
             return Result<RawImageInfo>(info);
         }

@@ -12,8 +12,8 @@
 
 class WorldManager final {
 private:
-
     std::shared_ptr<class Renderer> renderer;
+    std::forward_list<std::shared_ptr<struct SpriteComponent>> components;
 
 private:
     explicit WorldManager();
@@ -23,6 +23,8 @@ private:
     Result<struct VkDevice_T *> getGraphicsDevice() const noexcept;
 
 public:
+    void addObject(std::shared_ptr<struct SpriteComponent> object) noexcept;
+
     inline static WorldManager &getManager() noexcept {
         static WorldManager inst;
         return inst;

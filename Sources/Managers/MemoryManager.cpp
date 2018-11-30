@@ -76,7 +76,7 @@ Result<std::shared_ptr<PoolAllocator>> MemoryManager::requestPoolAllocator(uint6
     }
 
     Result<std::shared_ptr<PoolAllocator>> result =
-            PoolAllocator::createAllocator(chunkSize * 10,
+            PoolAllocator::createAllocator(chunkSize * 100,
                                            chunkSize,
                                            alignment,
                                            flags);

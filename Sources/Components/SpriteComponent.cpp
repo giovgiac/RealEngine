@@ -141,6 +141,14 @@ Result<void> SpriteComponent::load() {
     return Result<void>::createError(Error::None);
 }
 
+void SpriteComponent::begin() {
+
+}
+
+void SpriteComponent::update() {
+
+}
+
 void SpriteComponent::move(float dx, float dy) {
     this->position.x += dx;
     this->position.y += dy;
@@ -148,6 +156,11 @@ void SpriteComponent::move(float dx, float dy) {
 
 void SpriteComponent::rotate(float angle) {
     this->rotation += glm::angleAxis(glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
+}
+
+void SpriteComponent::resize(float dx, float dy) {
+    this->scale.x *= dx;
+    this->scale.y *= dy;
 }
 
 void SpriteComponent::setPosition(float x, float y) {

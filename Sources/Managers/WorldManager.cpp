@@ -19,11 +19,17 @@
 #include <vulkan/vulkan.h>
 
 WorldManager::WorldManager() {
+    this->components = {};
     this->renderer = nullptr;
 }
 
 WorldManager::~WorldManager() {
     this->renderer.reset();
+}
+
+void WorldManager::addObject(std::shared_ptr<SpriteComponent> object) noexcept {
+    this->renderer->addObject(object);
+    this->components.emplace_front(object);
 }
 
 Result<VkDevice> WorldManager::getGraphicsDevice() const noexcept {
@@ -59,8 +65,18 @@ Result<void> WorldManager::play(Game *game) {
         auto window = static_cast<std::shared_ptr<Window>>(result);
 
         game->begin();
+        renderer->load();
+
+        for (auto &spr : components) {
+            spr->begin();
+        }
+
         while (!window->shouldClose()) {
             game->update();
+
+            for (auto &spr: components) {
+                spr->update();
+            }
 
             // Render Loop
             this->renderer->begin();

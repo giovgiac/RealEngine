@@ -56,9 +56,15 @@ public:
 
     Result<void> load();
 
+    virtual void begin();
+
+    virtual void update();
+
     void move(float dx, float dy);
 
     void rotate(float angle);
+
+    void resize(float dx, float dy);
 
     void setPosition(float x, float y);
 
