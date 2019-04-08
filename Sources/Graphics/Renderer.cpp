@@ -1062,7 +1062,7 @@ Result<void> Renderer::end() {
     this->deviceQueues[0]->submit(&this->queueSemaphores[0], 1, &this->imageSemaphore, 1, &stage, VK_NULL_HANDLE);
 
     // Reset Buffers
-    vkQueueWaitIdle(queue);
+    // vkQueueWaitIdle(queue);
     this->deviceQueues[0]->resetBuffers();
 
     if (vkQueuePresentKHR(queue, &presentInfoKHR) != VK_SUCCESS) {

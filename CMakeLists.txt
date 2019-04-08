@@ -5,11 +5,11 @@
 #
 #
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.0)
 project(RealEngine)
 
 # C++ Standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 # Project Include Directories
 include_directories("Headers/")
@@ -38,8 +38,6 @@ if (APPLE)
     find_library(IOKIT_LIBRARY IOKit)
     find_library(IOSURFACE_LIBRARY IOSurface)
     find_library(LIBCPP_LIBRARY libc++.dylib)
-    find_library(LIBGTEST_LIBRARY libgtest.a)
-    find_library(LIBGTEST_MAIN_LIBRARY libgtest_main.a)
     find_library(METAL_LIBRARY Metal)
     find_library(MOLTENVK_LIBRARY MoltenVK)
     find_library(QUARTZCORE_LIBRARY QuartzCore)
@@ -51,8 +49,6 @@ if (APPLE)
     link_libraries(${IOKIT_LIBRARY})
     link_libraries(${IOSURFACE_LIBRARY})
     link_libraries(${LIBCPP_LIBRARY})
-    link_libraries(${LIBGTEST_LIBRARY})
-    link_libraries(${LIBGTEST_MAIN_LIBRARY})
     link_libraries(${METAL_LIBRARY})
     link_libraries(${MOLTENVK_LIBRARY})
     link_libraries(${QUARTZCORE_LIBRARY})
@@ -62,8 +58,6 @@ if (UNIX AND NOT APPLE)
     # For Linux and BSD Operating Systems
     link_libraries(freeimage)
     link_libraries(glfw)
-    link_libraries(gtest)
-    link_libraries(gtest_main)
     link_libraries(pthread)
     link_libraries(vulkan)
 endif()
@@ -89,7 +83,7 @@ set(HEADERS Headers/Core/Error.h
         Headers/Managers/MemoryManager.h
         Headers/Managers/WindowManager.h
         Headers/Managers/WorldManager.h
-        Tests/TestManagerFixture.h Headers/Core/Game.h)
+        Headers/Core/Game.h)
 
 # Source Files
 set(SOURCES Sources/Device/Buffer.cpp
@@ -108,10 +102,10 @@ set(SOURCES Sources/Device/Buffer.cpp
         Sources/Managers/MemoryManager.cpp
         Sources/Managers/WindowManager.cpp
         Sources/Managers/WorldManager.cpp
-        Tests/TestManagers.cpp
-        Tests/TestResources.cpp Sources/Core/Game.cpp)
+        Sources/Core/Game.cpp)
 
 # Copy Shaders
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Shaders)
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Shaders/vert.spv
         ${CMAKE_CURRENT_BINARY_DIR}/Shaders

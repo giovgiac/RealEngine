@@ -1,0 +1,5 @@
+# Ignore Binaries
+Binaries/
+
+# Ignore IDE Files
+.vscode/
